@@ -1,3 +1,5 @@
+using TuesberryAPIServer;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -15,5 +17,8 @@ if(!app.Environment.IsDevelopment())
 app.UseRouting();
 
 app.MapControllers();
+
+IConfiguration configuration = app.Configuration;
+DBManager.Init(configuration);  
 
 app.Run();
