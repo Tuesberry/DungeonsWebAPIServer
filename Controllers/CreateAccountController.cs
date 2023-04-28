@@ -1,5 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using SqlKata.Execution;
+using ZLogger;
+using TuesberryAPIServer.ModelReqRes;
+using TuesberryAPIServer.Services;
 
 namespace TuesberryAPIServer.Controllers
 {
@@ -7,43 +10,28 @@ namespace TuesberryAPIServer.Controllers
     [Route("[controller]")]
     public class CreateAccountController : ControllerBase
     {
+        readonly ILogger _logger;
+        readonly IAccountDb _accountDb;
+
+        public CreateAccountController(ILogger<CreateAccountController> logger, IAccountDb accountDb)
+        {
+            _logger = logger;
+            _accountDb = accountDb;
+        }
+
         [HttpPost]
         public async Task<PkCreateAccountResponse> Post([FromBody]PkCreateAccountRequest request)
         {
             var response = new PkCreateAccountResponse { Result = ErrorCode.None };
 
-            var saltValue = Security.SaltString();
-            var hashingPassword = Security.MakeHashingPassWord(saltValue, request.Password);
-
-            using(var db = await DBManager.GetDBQuery())
+            var errorCode = await _accountDb.CreateAccount(request.Id, request.Pw);
+            if(errorCode != ErrorCode.None) 
             {
-                try
-                {
-                    var count = await db.Query("account").InsertAsync(new
-                    {
-                        Email = request.Email,
-                        SaltValue = saltValue,
-                        HashedPassword = hashingPassword
-                    });
-
-                    if (count != 1)
-                    {
-                        response.Result = ErrorCode.Create_Account_Fail_Duplicate;
-                    }
-
-                    Console.WriteLine($"[Request CreateAccount] Email:{request.Email}, saltValue:{saltValue}, hashingPassword:{hashingPassword}");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.ToString());
-                    response.Result = ErrorCode.Create_Account_Fail_Exception;
-                    return response;
-                }
-                finally
-                {
-                    db.Dispose();
-                }
+                response.Result = errorCode;
+                return response;
             }
+
+            // TODO : log
 
             return response;
         }

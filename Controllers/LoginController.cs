@@ -2,7 +2,11 @@
 using System.Reflection.Metadata.Ecma335;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using SqlKata.Execution;
+using ZLogger;
+using TuesberryAPIServer.ModelReqRes;
+using TuesberryAPIServer.Services;
 
 namespace TuesberryAPIServer.Controllers
 {
@@ -10,32 +14,43 @@ namespace TuesberryAPIServer.Controllers
     [Route("[controller]")]
     public class LoginController : ControllerBase
     {
+        readonly ILogger _logger;
+        readonly IAccountDb _accountDb;
+        readonly IMemoryDb _memoryDb;
+
+        public LoginController(ILogger<LoginController> logger, IAccountDb accountDb, IMemoryDb memoryDb)
+        {
+            _logger = logger;   
+            _accountDb = accountDb;
+            _memoryDb = memoryDb;
+        }
+
         [HttpPost]
         public async Task<PKLoginResponse> Post([FromBody]PKLoginRequest request)
         {
             var response = new PKLoginResponse();
-            response.Result = ErrorCode.None;
-            
-            using(var db = await DBManager.GetDBQuery())
+
+            // verify account
+            var(errorCode, accountId) = await _accountDb.VerifyAccount(request.Id, request.Pw);
+            if(errorCode != ErrorCode.None)
             {
-                var userInfo = await db.Query("account").Where("Email", request.Email).FirstOrDefaultAsync<DBUserInfo>();
-            
-                if(userInfo == null || string.IsNullOrEmpty(userInfo.HashedPassword))
-                {
-                    response.Result = ErrorCode.Login_Fail_NotUser;
-                    return response;
-                }
-
-                var hashingPassword = Security.MakeHashingPassWord(userInfo.SaltValue, request.Password);
-                if(userInfo.HashedPassword != hashingPassword) 
-                {
-                    response.Result = ErrorCode.Login_Fail_PW;
-                    return response;
-                }
-
-                db.Dispose();
+                response.Result = errorCode;
+                return response;
             }
-            
+
+            // create authToken
+            var authToken = Security.CreateAuthToken();
+            errorCode = await _memoryDb.RegistUserAsync(request.Id, authToken, accountId);
+            if(errorCode != ErrorCode.None)
+            {
+                response.Result = errorCode;
+                return response;
+            }
+
+            // log
+            _logger.ZLogInformation($"[LoginController] id: {request.Id}, pw: {request.Pw}");
+
+            response.Authtoken = authToken;
             return response;
         }
     }
