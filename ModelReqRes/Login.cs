@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using TuesberryAPIServer.ModelDb;
 
 namespace TuesberryAPIServer.ModelReqRes
 {
@@ -16,6 +17,13 @@ namespace TuesberryAPIServer.ModelReqRes
     public class PKLoginResponse
     {
         public ErrorCode Result { get; set; } = ErrorCode.None;
-        public string Authtoken { get; set; } = string.Empty;  
+        
+        public string Authtoken { get; set; } = string.Empty;
+
+        public GameData GameData { get; set; } = new();
+
+        public List<ItemData> ItemDatum { get; set; } = new();
     }
+
+
 }

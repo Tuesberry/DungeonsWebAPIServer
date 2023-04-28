@@ -12,11 +12,13 @@ namespace TuesberryAPIServer.Controllers
     {
         readonly ILogger _logger;
         readonly IAccountDb _accountDb;
+        readonly IGameDb _gameDb;
 
-        public CreateAccountController(ILogger<CreateAccountController> logger, IAccountDb accountDb)
+        public CreateAccountController(ILogger<CreateAccountController> logger, IAccountDb accountDb, IGameDb gameDb)
         {
             _logger = logger;
             _accountDb = accountDb;
+            _gameDb = gameDb;
         }
 
         [HttpPost]
@@ -24,14 +26,25 @@ namespace TuesberryAPIServer.Controllers
         {
             var response = new PkCreateAccountResponse { Result = ErrorCode.None };
 
-            var errorCode = await _accountDb.CreateAccount(request.Id, request.Pw);
+            // create account
+            var(errorCode, accountId) = await _accountDb.CreateAccount(request.Id, request.Pw);
             if(errorCode != ErrorCode.None) 
             {
                 response.Result = errorCode;
                 return response;
             }
 
-            // TODO : log
+            _logger.ZLogInformation($"[CreateAccount.CreateAccount] id: {request.Id}, accountId: {accountId}");
+
+            // create game data
+            errorCode = await _gameDb.CreateGameData(accountId);
+            if(errorCode != ErrorCode.None) 
+            {
+                response.Result = errorCode;
+                return response;
+            }
+
+            _logger.ZLogInformation($"[CreateAccount.CreateGameData] id: {request.Id}, accountId: {accountId}");
 
             return response;
         }

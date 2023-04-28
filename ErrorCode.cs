@@ -16,5 +16,13 @@
         Check_Auth_Fail_Not_Exist = 21,
         Check_Auth_Fail_Not_Match = 22,
         Check_Auth_Fail_Exception = 23,
+
+        Create_GameData_Fail_Exception = 24,
+        Create_GameData_Fail_Duplicate = 25,
+
+        Get_GameDate_Fail_Not_Exist = 26,
+        Get_GameData_Fail_Exception = 27,
+
+        Get_ItemData_Fail_Exception = 28,
     }
 }

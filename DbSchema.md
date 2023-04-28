@@ -30,12 +30,11 @@ USE GameDB;
 CREATE TABLE IF NOT EXISTS GameDB. GameData
 (
     AccountId BIGINT NOT NULL PRIMARY KEY COMMENT '계정 번호',
-    Level INT COMMENT '레벨',
-    Exp INT COMMENT '경험치',
-    Hp INT COMMENT '체력',
-    Ap INT COMMENT '공격력',
-    Mp INT COMMENT '마력',
-    Stage INT COMMENT '최종 클리어 스테이지',
+    Level INT DEFAULT(1) COMMENT '레벨',
+    Exp INT DEFAULT(0) COMMENT '경험치',
+    Hp INT DEFAULT(0) COMMENT '체력',
+    Ap INT DEFAULT(0) COMMENT '공격력',
+    Mp INT DEFAULT(0) COMMENT '마력',
     LastLoginDate DATE COMMENT '마지막 로그인 날짜'
 ) COMMENT '플레이어 게임 데이터';
 ```
@@ -46,7 +45,7 @@ CREATE TABLE IF NOT EXISTS GameDB. ItemData
 (
     AccountId BIGINT NOT NULL COMMENT '계정 번호',
     ItemCode INT COMMENT '아이템 코드',
-    Amount INT COMMENT '수량',
+    Amount INT DEFAULT(1) COMMENT '수량',
     EnchanceCount INT COMMENT '강화 횟수'
 ) COMMENT '플레이어 아이템 데이터';
 ```

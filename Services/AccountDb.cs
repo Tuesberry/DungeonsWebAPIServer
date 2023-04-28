@@ -15,7 +15,7 @@ namespace TuesberryAPIServer.Services
 
         QueryFactory _queryFactory;
         IDbConnection _connection;
-        SqlKata.Compilers.MySqlCompiler _compiler;
+        MySqlCompiler _compiler;
 
         public AccountDb(ILogger<AccountDb> logger, IOptions<DbConfig> options) 
         {
@@ -33,33 +33,33 @@ namespace TuesberryAPIServer.Services
            _connection.Close();
         }
 
-        public async Task<ErrorCode> CreateAccount(string id, string pw)
+        public async Task<Tuple<ErrorCode, Int64>> CreateAccount(string id, string pw)
         {
             try
             {
                 var saltValue = Security.SaltString();
                 var hashingPassword = Security.MakeHashingPassWord(saltValue, pw);
 
-                var count = await _queryFactory.Query("account").InsertAsync(new
+                Int64 accountId = await _queryFactory.Query("account").InsertGetIdAsync<Int64>(new
                 {
                     UserId = id,
                     SaltValue = saltValue,
                     HashedPassword = hashingPassword
                 });
 
-                if(count != 1)
+                if(accountId == 0)
                 {
                     _logger.ZLogError($"[AccountDb.CreateAccount] ErrorCode : {ErrorCode.Create_Account_Fail_Duplicate}, Id: {id}");
-                    return ErrorCode.Create_Account_Fail_Duplicate;
+                    return new Tuple<ErrorCode, Int64>(ErrorCode.Create_Account_Fail_Duplicate, 0);
                 }
 
-                _logger.ZLogInformation($"[CreateAccount] Id: {id}, SaltValue: {saltValue} ,hashedPassword: {hashingPassword}");
-                return ErrorCode.None;
+                _logger.ZLogInformation($"[CreateAccount] Id: {id}, SaltValue: {saltValue} ,hashedPassword: {hashingPassword}, AccountId: {accountId}");
+                return new Tuple<ErrorCode, Int64>(ErrorCode.None, accountId);
             }
-            catch (Exception ex)
+            catch
             {
                 _logger.ZLogError($"[AccountDb.CreateAccount] ErrorCode : {ErrorCode.Create_Account_Fail_Exception}, Id: {id}");
-                return ErrorCode.Create_Account_Fail_Exception;
+                return new Tuple<ErrorCode, Int64>(ErrorCode.Create_Account_Fail_Exception, 0);
             }
         }
         public async Task<Tuple<ErrorCode, Int64>> VerifyAccount(string id, string pw)
