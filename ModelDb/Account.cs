@@ -5,7 +5,6 @@
         public Int64 AccountId { get; set; } = 0;
         public string UserId { get; set; } = string.Empty;
         public string SaltValue { get; set; } = string.Empty;
-
         public string HashedPassword { get; set; } = string.Empty;
     }
 

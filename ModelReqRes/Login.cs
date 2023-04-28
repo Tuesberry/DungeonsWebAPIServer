@@ -12,6 +12,12 @@ namespace TuesberryAPIServer.ModelReqRes
         [Required(ErrorMessage = "Required")]
         [StringLength(100, MinimumLength = 8, ErrorMessage = "Pw length is not appropriate")]
         public string Pw { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Required")]
+        public string AppVersion { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Required")]
+        public string MasterDataVersion { get; set; } = string.Empty;   
     }
 
     public class PKLoginResponse
@@ -23,6 +29,8 @@ namespace TuesberryAPIServer.ModelReqRes
         public GameData GameData { get; set; } = new();
 
         public List<ItemData> ItemDatum { get; set; } = new();
+
+        public string Notice { get; set; } = string.Empty;  
     }
 
 

@@ -4,6 +4,8 @@
     {
         None  = 0,
 
+        Version_Fail = 1,
+
         Create_Account_Fail_Duplicate = 11,
         Create_Account_Fail_Exception = 12,
 
@@ -24,5 +26,7 @@
         Get_GameData_Fail_Exception = 27,
 
         Get_ItemData_Fail_Exception = 28,
+
+        Get_Notice_Fail_Exception = 29,
     }
 }

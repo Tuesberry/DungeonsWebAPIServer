@@ -113,6 +113,28 @@ namespace TuesberryAPIServer.Services
                 _logger.ZLogError($"[RedisDb.GetUserAsync] Id doesn't exist, id = {id}");
                 return (false, null);
             }
-        }   
+        }
+
+        public async Task<Tuple<ErrorCode, string>> GetNotice()
+        {
+            try
+            {
+                var redis = new RedisString<string>(_redisCon, "Notice", null);
+                var notice = await redis.GetAsync();
+
+                if (!notice.HasValue)
+                {
+                    _logger.ZLogError($"[RedisDb.GetNotice] Notice doesn't exist");
+                    return new Tuple<ErrorCode, string>(ErrorCode.Get_Notice_Fail_Exception, null);
+                }
+
+                return new Tuple<ErrorCode, string>(ErrorCode.None, notice.Value);
+            }
+            catch
+            {
+                _logger.ZLogError($"[RedisDb.GetNotice] Redis error");
+                return new Tuple<ErrorCode, string>(ErrorCode.Get_Notice_Fail_Exception, null);
+            }
+        }
     }
 }

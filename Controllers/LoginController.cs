@@ -74,6 +74,16 @@ namespace TuesberryAPIServer.Controllers
                 response.ItemDatum.Add(itemData);
             }
 
+            // get notice
+            (errorCode, string notice) = await _memoryDb.GetNotice();
+            if(errorCode != ErrorCode.None) 
+            {
+                response.Result = errorCode;
+                return response;
+            }
+
+            response.Notice = notice;
+
             _logger.ZLogInformation($"[LoginController.Login] id: {request.Id}, pw: {request.Pw}");
             return response;
         }

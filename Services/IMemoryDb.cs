@@ -11,5 +11,7 @@ namespace TuesberryAPIServer.Services
         public Task<ErrorCode> CheckUserAuthAsync(string id, string authToken);
 
         public Task<(bool, AuthUser)> GetUserAsync(string id);
+
+        public Task<Tuple<ErrorCode, string>> GetNotice();
     }
 }
