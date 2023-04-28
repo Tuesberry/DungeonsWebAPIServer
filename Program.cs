@@ -9,7 +9,8 @@ builder.Services.AddLogging();
 builder.Services.AddControllers();
 
 // dbconfig option binding
-builder.Services.Configure<DbConfig>(builder.Configuration.GetSection(nameof(DbConfig)));
+IConfiguration configuration = builder.Configuration;
+builder.Services.Configure<DbConfig>(configuration.GetSection(nameof(DbConfig)));
 
 // add db services
 builder.Services.AddTransient<IGameDb, GameDb>();
@@ -33,4 +34,8 @@ app.UseRouting();
 
 app.MapControllers();
 
-app.Run();
+//redis init
+var redisDb = app.Services.GetRequiredService<IMemoryDb>();
+redisDb.Init(configuration.GetSection("DbConfig")["Redis"]);
+
+app.Run(configuration["ServerAddress"]);
