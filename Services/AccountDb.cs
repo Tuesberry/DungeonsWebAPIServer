@@ -33,61 +33,61 @@ namespace TuesberryAPIServer.Services
            _connection.Close();
         }
 
-        public async Task<Tuple<ErrorCode, Int64>> CreateAccount(string id, string pw)
+        public async Task<ErrorCode> CreateAccount(string id, string pw)
         {
             try
             {
                 var saltValue = Security.SaltString();
                 var hashingPassword = Security.MakeHashingPassWord(saltValue, pw);
 
-                Int64 accountId = await _queryFactory.Query("account").InsertGetIdAsync<Int64>(new
+                var count = await _queryFactory.Query("account").InsertAsync(new
                 {
                     UserId = id,
                     SaltValue = saltValue,
                     HashedPassword = hashingPassword
                 });
 
-                if(accountId == 0)
+                if(count != 1)
                 {
                     _logger.ZLogError($"[AccountDb.CreateAccount] ErrorCode : {ErrorCode.Create_Account_Fail_Duplicate}, Id: {id}");
-                    return new Tuple<ErrorCode, Int64>(ErrorCode.Create_Account_Fail_Duplicate, 0);
+                    return ErrorCode.Create_Account_Fail_Duplicate;
                 }
 
-                _logger.ZLogInformation($"[CreateAccount] Id: {id}, SaltValue: {saltValue} ,hashedPassword: {hashingPassword}, AccountId: {accountId}");
-                return new Tuple<ErrorCode, Int64>(ErrorCode.None, accountId);
+                _logger.ZLogInformation($"[AccountDb.CreateAccount] Id: {id}, SaltValue: {saltValue} ,hashedPassword: {hashingPassword}");
+                return ErrorCode.None;
             }
             catch
             {
                 _logger.ZLogError($"[AccountDb.CreateAccount] ErrorCode : {ErrorCode.Create_Account_Fail_Exception}, Id: {id}");
-                return new Tuple<ErrorCode, Int64>(ErrorCode.Create_Account_Fail_Exception, 0);
+                return ErrorCode.Create_Account_Fail_Exception;
             }
         }
-        public async Task<Tuple<ErrorCode, Int64>> VerifyAccount(string id, string pw)
+        public async Task<ErrorCode> VerifyAccount(string id, string pw)
         {
             try
             {
                 var accountInfo = await _queryFactory.Query("account").Where("UserId", id).FirstOrDefaultAsync<Account>();
 
-                if (accountInfo is null || accountInfo.AccountId == 0)
+                if (accountInfo is null )
                 {
                     _logger.ZLogError($"[AccountDb.VerifyAccount] ErrorCode : {ErrorCode.Login_Fail_Pw_Not_Match}, Id : {id}");
-                    return new Tuple<ErrorCode, Int64>(ErrorCode.Login_Fail_User_Not_Exist, 0);
+                    return ErrorCode.Login_Fail_User_Not_Exist;
                 }
 
                 var hashingValue = Security.MakeHashingPassWord(accountInfo.SaltValue, pw);
                 if (accountInfo.HashedPassword != hashingValue)
                 {
                     _logger.ZLogError($"[AccountDb.VerifyAccount] ErrorCode : {ErrorCode.Login_Fail_Pw_Not_Match}, Id : {id}");
-                    return new Tuple<ErrorCode, Int64>(ErrorCode.Login_Fail_Pw_Not_Match, 0);
+                    return ErrorCode.Login_Fail_Pw_Not_Match;
                 }
 
                 _logger.ZLogInformation($"[AccountDb.VerifyAccount] id : {id}, pw : {pw}");
-                return new Tuple<ErrorCode, Int64>(ErrorCode.None, accountInfo.AccountId);
+                return ErrorCode.None;
             }
             catch
             {
                 _logger.ZLogError($"[AccountDb.VerifyAccount] ErrorCode : {ErrorCode.Login_Fail_Exception}, Id : {id}");
-                return new Tuple<ErrorCode, Int64>(ErrorCode.Login_Fail_Exception, 0);
+                return ErrorCode.Login_Fail_Exception;
             }
         }
     }

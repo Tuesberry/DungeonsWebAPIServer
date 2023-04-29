@@ -7,6 +7,7 @@ using SqlKata.Execution;
 using ZLogger;
 using TuesberryAPIServer.ModelReqRes;
 using TuesberryAPIServer.Services;
+using TuesberryAPIServer.ModelDb;
 
 namespace TuesberryAPIServer.Controllers
 {
@@ -33,12 +34,22 @@ namespace TuesberryAPIServer.Controllers
             var response = new PKLoginResponse();
 
             // verify account
-            var(errorCode, accountId) = await _accountDb.VerifyAccount(request.Id, request.Pw);
+            var errorCode = await _accountDb.VerifyAccount(request.Id, request.Pw);
             if(errorCode != ErrorCode.None)
             {
                 response.Result = errorCode;
                 return response;
             }
+
+            // get GameData
+            (errorCode, var gameData, var accountId) = await _gameDb.LoadGameData(request.Id);
+            if (errorCode != ErrorCode.None)
+            {
+                response.Result = errorCode;
+                return response;
+            }
+
+            response.GameData = gameData;
 
             // create authToken
             var authToken = Security.CreateAuthToken();
@@ -51,28 +62,15 @@ namespace TuesberryAPIServer.Controllers
 
             response.Authtoken = authToken;
 
-            // get GameData
-            (errorCode, var gameData) = await _gameDb.GetGameData(accountId);
-            if(errorCode != ErrorCode.None) 
-            {
-                response.Result = errorCode;
-                return response;
-            }
-
-            response.GameData= gameData;
-
             // get ItemData
-            (errorCode, var ItemDatum) = await _gameDb.GetItemData(accountId);
+            (errorCode, var itemDatum) = await _gameDb.LoadItemData(accountId);
             if(errorCode != ErrorCode.None)
             {
                 response.Result = errorCode;
                 return response;
             }
 
-            foreach(var itemData in ItemDatum)
-            {
-                response.ItemDatum.Add(itemData);
-            }
+            response.ItemDatum = itemDatum;
 
             // get notice
             (errorCode, string notice) = await _memoryDb.GetNotice();

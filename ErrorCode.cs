@@ -25,8 +25,17 @@
         Get_GameDate_Fail_Not_Exist = 26,
         Get_GameData_Fail_Exception = 27,
 
-        Get_ItemData_Fail_Exception = 28,
+        Create_Item_Data_Fail_Duplicate= 28,
+        Create_Item_Data_Fail_Exception= 29,
 
-        Get_Notice_Fail_Exception = 29,
+        Insert_Item_Data_Fail_Duplicate = 30,
+        Insert_Item_Data_Fail_Exception = 31,
+
+        InsertOrUpdate_Item_Data_Fail_Duplicate = 32,
+        InsertOrUpdate__Item_Data_Fail_Exception = 33,
+
+        Get_ItemData_Fail_Exception = 34,
+
+        Get_Notice_Fail_Exception = 35,
     }
 }

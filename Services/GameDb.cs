@@ -34,79 +34,197 @@ namespace TuesberryAPIServer.Services
             _connection.Close();    
         }
 
-        public async Task<ErrorCode> CreateGameData(Int64 accountId)
+        public async Task<Tuple<ErrorCode, Int64>> CreateGameData(string userId)
         {
             try
             {
-                var count = await _queryFactory.Query("GameData").InsertAsync(new
+                Int64 accountId = await _queryFactory.Query("GameData").InsertGetIdAsync<Int64>(new
                 {
-                    AccountId = accountId,
+                    UserId = userId,
                     Level = 1,
                     Exp = 0,
-                    Hp = 1,
-                    Ap = 1,
-                    Mp = 1,
-                    LastLoginDate = DateTime.Today
+                    Hp = 20,
+                    Ap = 10,
+                    Mp = 10,
+                    Stage = 0
                 });
 
-                if(count != 1)
+                if(accountId == 0)
                 {
-                    _logger.ZLogError($"[AccountDb.CreateAccount] ErrorCode : {ErrorCode.Create_GameData_Fail_Duplicate}, AccountId: {accountId}");
-                    return ErrorCode.Create_GameData_Fail_Duplicate;
+                    _logger.ZLogError($"[AccountDb.CreateAccount] ErrorCode : {ErrorCode.Create_GameData_Fail_Duplicate}, UserId: {userId}");
+                    return new Tuple<ErrorCode, Int64>(ErrorCode.Create_GameData_Fail_Duplicate, 0);
                 }
+
+                return new Tuple<ErrorCode, Int64>(ErrorCode.None, accountId);
             }
             catch
             {
-                _logger.ZLogError($"[GameDb.CreateGameData] ErrorCode : {ErrorCode.Create_GameData_Fail_Exception}, AccountId: {accountId}");
-                return ErrorCode.Create_GameData_Fail_Exception;
-            }
-
-            return ErrorCode.None;
+                _logger.ZLogError($"[GameDb.CreateGameData] ErrorCode : {ErrorCode.Create_GameData_Fail_Exception}, UserId: {userId}");
+                return new Tuple<ErrorCode, Int64>(ErrorCode.Create_GameData_Fail_Exception, 0);
+            }   
         }
 
-        public async Task<Tuple<ErrorCode, GameData>> GetGameData(Int64 accountId)
+        public async Task<Tuple<ErrorCode, GameData, Int64>> LoadGameData(string userId)
         {
             try
             {
                 var gameData = await _queryFactory.Query("GameData")
                     .Select("Level", "Exp", "Hp", "Ap", "Mp")
-                    .Where("AccountId", accountId).FirstOrDefaultAsync<GameData>();
+                    .Where("UserId", userId).FirstOrDefaultAsync<GameData>();
 
-                if(gameData is null)
+                var accountId = await _queryFactory.Query("GameData")
+                    .Select("AccountId")
+                    .Where("UserId", userId) .FirstOrDefaultAsync<Int64>();
+
+                if(accountId == 0)
                 {
-                    _logger.ZLogError($"[GameDb.CreateGameData] ErrorCode : {ErrorCode.Get_GameDate_Fail_Not_Exist}, AccountId: {accountId}");
-                    return new Tuple<ErrorCode, GameData>(ErrorCode.Get_GameDate_Fail_Not_Exist, null);
+                    _logger.ZLogError($"[GameDb.CreateGameData] ErrorCode : {ErrorCode.Get_GameDate_Fail_Not_Exist}, UserId: {userId}");
+                    return new Tuple<ErrorCode, GameData, Int64>(ErrorCode.Get_GameDate_Fail_Not_Exist, null, 0);
                 }
 
-                _logger.ZLogInformation($"[GameDb.CreateGameData] Get Game Data Complete, AccountId: {accountId}");
-                return new Tuple<ErrorCode, GameData>(ErrorCode.None, gameData);
+                _logger.ZLogInformation($"[GameDb.CreateGameData] Get Game Data Complete, UserId: {userId}");
+                return new Tuple<ErrorCode, GameData, Int64>(ErrorCode.None, gameData, accountId);
             }
             catch
             {
-                _logger.ZLogError($"[GameDb.CreateGameData] ErrorCode : {ErrorCode.Get_GameDate_Fail_Not_Exist}, AccountId: {accountId}");
-                return new Tuple<ErrorCode, GameData>(ErrorCode.Get_GameData_Fail_Exception, null);
+                _logger.ZLogError($"[GameDb.CreateGameData] ErrorCode : {ErrorCode.Get_GameData_Fail_Exception}, UserId: {userId}");
+                return new Tuple<ErrorCode, GameData, Int64>(ErrorCode.Get_GameData_Fail_Exception, null, 0);
             }
         }
-        /*
-        public Task<ErrorCode> InsertCharacterItem(Int64 accountId, ItemData itemData)
-        {
 
+        public async Task<ErrorCode> CreateDefaultItemData(Int64 accountId)
+        {
+            try
+            {
+                ItemData itemData = new ItemData();
+                itemData.ItemCode = 1;
+                itemData.Amount = 10;
+
+                var errorCode = await InsertItem(accountId, itemData);
+                if(errorCode != ErrorCode.None)
+                {
+                    _logger.ZLogError($"[GameDb.CreateDefaultItemData] ErrorCode : {errorCode}, AccountId: {accountId}");
+                    return errorCode;
+                }
+
+                itemData.ItemCode = 2;
+                itemData.Amount = 1;
+
+                errorCode = await InsertItem(accountId, itemData);
+                if (errorCode != ErrorCode.None)
+                {
+                    _logger.ZLogError($"[GameDb.CreateDefaultItemData] ErrorCode : {errorCode}, AccountId: {accountId}");
+                    return errorCode;
+                }
+
+                return ErrorCode.None;
+            }
+            catch
+            {
+                _logger.ZLogError($"[GameDb.CreateDefaultItemData] ErrorCode : {ErrorCode.Create_Item_Data_Fail_Exception}, AccountId: {accountId}");
+                return ErrorCode.Create_Item_Data_Fail_Exception;
+            }
         }
-        */
-        public async Task<Tuple<ErrorCode, IEnumerable<ItemData>>> GetItemData(Int64 accountId)
+
+        public async Task<ErrorCode> InsertOrUpdateItem(Int64 accountId, ItemData itemData)
+        {
+            try
+            {
+                Int32 itemCode = itemData.ItemCode;
+
+                // 겹침 가능 여부 확인
+                if (MasterData.Items[itemCode]._bOverlapped)
+                {
+                    // 겹쳐질 수 있음 => update
+
+                    // 이미 있는지 확인
+                    var checkData = await _queryFactory.Query("ItemData")
+                        .Select("ItemId", "Amount")
+                        .Where( new { AccountID = accountId, ItemCode = itemCode })
+                        .GetAsync<ItemData>();
+
+                    // check null
+                    if( checkData is null )
+                    {
+                        _logger.ZLogError($"[GameDb.InsertOrUpdateItem] data doesn't exist, AccountId: {accountId}");
+                        return await InsertItem(accountId, itemData);
+                    }
+
+                    // get first data
+                    var refData = checkData.First();
+
+                    // update info
+                    var count = await _queryFactory.Query("ItemData")
+                        .Where( new { ItemId = refData.ItemId  })
+                        .UpdateAsync(new { Amount = refData.Amount + itemData.Amount });
+
+                    if(count != 1)
+                    {
+                        _logger.ZLogError($"[GameDb.InsertOrUpdateItem] ErrorCode : {ErrorCode.InsertOrUpdate__Item_Data_Fail_Exception}, AccountId: {accountId}");
+                        return ErrorCode.InsertOrUpdate__Item_Data_Fail_Exception;
+                    }
+                }
+                else
+                {
+                    // 겹쳐질 수 없음 => Insert
+                    _logger.ZLogError($"[GameDb.InsertOrUpdateItem] data can't overlappe, AccountId: {accountId}");
+                    return await InsertItem(accountId, itemData);
+                }
+                
+                return ErrorCode.None;
+            }
+            catch
+            {
+                _logger.ZLogError($"[GameDb.InsertOrUpdateItem] ErrorCode : {ErrorCode.InsertOrUpdate__Item_Data_Fail_Exception}, AccountId: {accountId}");
+                return ErrorCode.InsertOrUpdate__Item_Data_Fail_Exception;
+            }
+        }
+
+        async Task<ErrorCode> InsertItem(Int64 accountId, ItemData itemData)
+        {
+            try
+            {
+                var itemCode = itemData.ItemCode;
+
+                var count = await _queryFactory.Query("ItemData").InsertAsync(new
+                {
+                    AccountId = accountId,
+                    ItemCode = itemCode,
+                    Amount = itemData.Amount,
+                    Attack = MasterData.Items[itemCode]._attack,
+                    Defence = MasterData.Items[itemCode]._defence,
+                    Magic = MasterData.Items[itemCode]._magic,
+                });
+
+                if (count != 1)
+                {
+                    _logger.ZLogError($"[GameDb.InsertItem] ErrorCode : {ErrorCode.Insert_Item_Data_Fail_Duplicate}, AccountId: {accountId}");
+                    return ErrorCode.Insert_Item_Data_Fail_Duplicate;
+                }
+
+                return ErrorCode.None;
+            }
+            catch
+            {
+                _logger.ZLogError($"[GameDb.InsertItem] ErrorCode : {ErrorCode.Insert_Item_Data_Fail_Exception}, AccountId: {accountId}");
+                return ErrorCode.Insert_Item_Data_Fail_Exception;
+            }
+        }
+        
+        public async Task<Tuple<ErrorCode, List<ItemData>>> LoadItemData(Int64 accountId)
         {
             try
             {
                 var ItemDataList = await _queryFactory.Query("ItemData")
-                    .Select("ItemCode", "Amount", "EnchanceCount")
+                    .Select("ItemId", "ItemCode", "Amount", "EnchanceCount")
                     .Where("AccountId", accountId).GetAsync<ItemData>();
 
-                return new Tuple<ErrorCode, IEnumerable<ItemData>>(ErrorCode.None, ItemDataList);   
+                return new Tuple<ErrorCode, List<ItemData>>(ErrorCode.None, ItemDataList.ToList<ItemData>());
             }
             catch
             {
                 _logger.ZLogError($"[GameDb.CreateGameData] ErrorCode : {ErrorCode.Get_GameDate_Fail_Not_Exist}, AccountId: {accountId}");
-                return new Tuple<ErrorCode, IEnumerable<ItemData>>(ErrorCode.Get_ItemData_Fail_Exception, null);
+                return new Tuple<ErrorCode, List<ItemData>>(ErrorCode.Get_ItemData_Fail_Exception, null);
             }
         }
         

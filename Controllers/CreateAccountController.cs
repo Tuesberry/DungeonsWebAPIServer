@@ -27,17 +27,17 @@ namespace TuesberryAPIServer.Controllers
             var response = new PkCreateAccountResponse { Result = ErrorCode.None };
 
             // create account
-            var(errorCode, accountId) = await _accountDb.CreateAccount(request.Id, request.Pw);
+            var errorCode = await _accountDb.CreateAccount(request.Id, request.Pw);
             if(errorCode != ErrorCode.None) 
             {
                 response.Result = errorCode;
                 return response;
             }
 
-            _logger.ZLogInformation($"[CreateAccount.CreateAccount] id: {request.Id}, accountId: {accountId}");
+            _logger.ZLogInformation($"[CreateAccount] Userid: {request.Id}");
 
             // create game data
-            errorCode = await _gameDb.CreateGameData(accountId);
+            (errorCode, var accountId) = await _gameDb.CreateGameData(request.Id);
             if(errorCode != ErrorCode.None) 
             {
                 response.Result = errorCode;
@@ -45,6 +45,16 @@ namespace TuesberryAPIServer.Controllers
             }
 
             _logger.ZLogInformation($"[CreateAccount.CreateGameData] id: {request.Id}, accountId: {accountId}");
+
+            // create default item data
+            errorCode = await _gameDb.CreateDefaultItemData(accountId);
+            if(errorCode != ErrorCode.None)
+            {
+                response.Result = errorCode;
+                return response;
+            }
+
+            _logger.ZLogInformation($"[CreateAccount.CreateDefaultItemData] id: {request.Id}, accountId: {accountId}");
 
             return response;
         }
