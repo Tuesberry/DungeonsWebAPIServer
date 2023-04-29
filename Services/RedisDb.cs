@@ -11,8 +11,8 @@ namespace TuesberryAPIServer.Services
         readonly ILogger<RedisDb> _logger;
         public RedisConnection _redisCon;
 
-        public RedisDb(ILogger<RedisDb> logger) 
-        { 
+        public RedisDb(ILogger<RedisDb> logger)
+        {
             _logger = logger;
         }
 
@@ -40,7 +40,7 @@ namespace TuesberryAPIServer.Services
             try
             {
                 var redis = new RedisString<AuthUser>(_redisCon, key, null);
-                if(await redis.SetAsync(user, null) == false)
+                if (await redis.SetAsync(user, null) == false)
                 {
                     _logger.ZLogError($"[RedisDb.RegisterUserAsync] Redis String set error, id = {id}");
                     result = ErrorCode.Login_Fail_Add_Redis;
@@ -100,7 +100,7 @@ namespace TuesberryAPIServer.Services
                 var redis = new RedisString<AuthUser>(_redisCon, key, null);
                 var user = await redis.GetAsync();
 
-                if(!user.HasValue)
+                if (!user.HasValue)
                 {
                     _logger.ZLogError($"[RedisDb.GetUserAsync] Not assigned user, id = {id}");
                     return (false, null);
@@ -112,6 +112,45 @@ namespace TuesberryAPIServer.Services
             {
                 _logger.ZLogError($"[RedisDb.GetUserAsync] Id doesn't exist, id = {id}");
                 return (false, null);
+            }
+        }
+
+        public async Task<bool> SetUserReqLockAsync(string key)
+        {
+            try
+            {
+                var redis = new RedisString<AuthUser>(_redisCon, key, null);
+                if(await redis.SetAsync(new AuthUser(), null, StackExchange.Redis.When.NotExists) == false)
+                {
+                    _logger.ZLogError($"[RedisDb.SetUserReqLockAsync] Error : Key Duplicate");
+                    return false;
+                }
+                _logger.ZLogInformation("[RedisDb.SetUserReqLock] complete");
+                return true;
+            }
+            catch
+            {
+                _logger.ZLogError($"[RedisDb.SetUserReqLockAsync] Redis Connection Error");
+                return false;
+            }
+        }
+
+        public async Task<bool> DelUserReqLockAsync(string key)
+        {
+            if(string.IsNullOrEmpty(key))
+            {
+                return false;   
+            }
+
+            try
+            {
+                var redis = new RedisString<AuthUser>(_redisCon, key, null);
+                var redisResult = await redis.DeleteAsync();
+                return redisResult;
+            }
+            catch
+            {
+                return false;
             }
         }
 

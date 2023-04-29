@@ -1,4 +1,5 @@
 using TuesberryAPIServer;
+using TuesberryAPIServer.Middleware;
 using TuesberryAPIServer.Services;
 using ZLogger;
 
@@ -7,6 +8,9 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services
 builder.Services.AddLogging();
 builder.Services.AddControllers();
+
+// http context accessor
+builder.Services.AddHttpContextAccessor();
 
 // dbconfig option binding
 IConfiguration configuration = builder.Configuration;
@@ -30,6 +34,11 @@ if(!app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();    
 }
 
+// add check middleware
+app.UseCheckUserVersion();
+app.UseCheckUserAuth();
+
+// use routing
 app.UseRouting();
 
 app.MapControllers();

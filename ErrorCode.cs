@@ -4,7 +4,16 @@
     {
         None  = 0,
 
-        Version_Fail = 1,
+        Invalid_Request_Http_Body = 1,
+        Invalid_Version_Fail_Wrong_Keyword = 2,
+        Invalid_AppVersion = 3,
+        Invalid_MasterDataVersion = 4,
+        Invalid_AppVersion_And_MasterDataVersion = 5,
+
+        AuthToken_Fail_Wrong_keyword = 6,
+        AuthToken_Fail_Wrong_AuthToken = 7,
+        AuthToken_Fail_SetNx = 8,
+        AuthToken_Access_Error = 9,
 
         Create_Account_Fail_Duplicate = 11,
         Create_Account_Fail_Exception = 12,

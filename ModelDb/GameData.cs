@@ -9,12 +9,6 @@
         public Int32 Mp { get; set; } = 0;
     }
 
-    public class LoadGameData
-    {
-        public Int64 AccountId { get; set; } = 0;
-        GameData GameData { get; set; } = new GameData();
-    }
-
     public class ItemData
     {
         public Int32 ItemId { get; set; } = 0;
