@@ -46,5 +46,8 @@
         Get_ItemData_Fail_Exception = 34,
 
         Get_Notice_Fail_Exception = 35,
+
+        Logout_Fail_Id_Not_Exist = 36,
+        Logout_Fail_Exception = 37,
     }
 }

@@ -1,5 +1,6 @@
 ﻿using CloudStructures;
 using CloudStructures.Structures;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.Extensions.Options;
 using TuesberryAPIServer.ModelDb;
 using ZLogger;
@@ -112,6 +113,26 @@ namespace TuesberryAPIServer.Services
             {
                 _logger.ZLogError($"[RedisDb.GetUserAsync] Id doesn't exist, id = {id}");
                 return (false, null);
+            }
+        }
+
+        public async Task<ErrorCode> DelUserAsync(string id)
+        {
+            var key = MemoryDbKeyMaker.MakeUIDKey(id);
+
+            try
+            {
+                var redis = new RedisString<AuthUser>(_redisCon, key, null);
+                if(!await redis.DeleteAsync())
+                {
+                    return ErrorCode.Logout_Fail_Id_Not_Exist;
+                }
+
+                return ErrorCode.None;
+            }
+            catch
+            {
+                return ErrorCode.Logout_Fail_Exception;
             }
         }
 

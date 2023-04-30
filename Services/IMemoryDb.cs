@@ -12,6 +12,8 @@ namespace TuesberryAPIServer.Services
 
         public Task<(bool, AuthUser)> GetUserAsync(string id);
 
+        public Task<ErrorCode> DelUserAsync(string id); 
+
         public Task<bool> SetUserReqLockAsync(string key);
 
         public Task<bool> DelUserReqLockAsync(string key);

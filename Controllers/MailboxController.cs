@@ -20,11 +20,12 @@ namespace TuesberryAPIServer.Controllers
             _gameDb = gameDb;
         }
 
-        [HttpPost]
-        public async Task<PkMailboxResponse> Post([FromBody]PkMailboxRequest request)
+        [HttpPost("LoadMail")]
+        public async Task<PkLoadMailResponse> LoadMailList([FromBody]PkLoadMailRequest request)
         {
-            var response = new PkMailboxResponse();
+            var response = new PkLoadMailResponse();
 
+            // userInfo 가져오기
             AuthUser userInfo = _httpContextAccessor.HttpContext.Items[nameof(AuthUser)] as AuthUser;
             if(userInfo is null)
             {
@@ -32,8 +33,30 @@ namespace TuesberryAPIServer.Controllers
                 return response;
             }
 
+            // page number 중복 확인 
+
+            // load mailbox list
+
+            // page 번호 기록
+
             return response;
         }
-       
+
+        [HttpPost("GetMailItem")]
+        public async Task<PkGetMailItemResponse> GetMailItem([FromBody]PkGetMailItemRequest request)
+        {
+            var response = new PkGetMailItemResponse();
+
+            AuthUser userInfo = _httpContextAccessor.HttpContext.Items[nameof(AuthUser)] as AuthUser;
+            if (userInfo is null)
+            {
+                response.Result = ErrorCode.AuthToken_Access_Error;
+                return response;
+            }
+
+            // item 받기
+
+            return response;
+        }
     }
 }

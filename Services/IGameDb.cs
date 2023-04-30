@@ -13,5 +13,7 @@ namespace TuesberryAPIServer.Services
         public Task<ErrorCode> InsertOrUpdateItem(Int64 accountId, ItemData itemData);
 
         public Task<Tuple<ErrorCode, List<ItemData>>> LoadItemData(Int64 accountId);
+
+        //public Task<Tuple<ErrorCode, List<MailboxData>>> LoadMailboxData(Int64 accountId);
     }
 }

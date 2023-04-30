@@ -227,6 +227,19 @@ namespace TuesberryAPIServer.Services
                 return new Tuple<ErrorCode, List<ItemData>>(ErrorCode.Get_ItemData_Fail_Exception, null);
             }
         }
-        
+        /*
+        public async Task<Tuple<ErrorCode, List<MailboxData>>> LoadMailboxData(Int64 accountId)
+        {
+            try
+            {
+                var MailboxDataList = await _queryFactory.Query("Mailbox")
+                    .Select("")
+            }
+            catch
+            {
+
+            }
+        }
+        */
     }
 }
