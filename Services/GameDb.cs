@@ -227,19 +227,26 @@ namespace TuesberryAPIServer.Services
                 return new Tuple<ErrorCode, List<ItemData>>(ErrorCode.Get_ItemData_Fail_Exception, null);
             }
         }
-        /*
-        public async Task<Tuple<ErrorCode, List<MailboxData>>> LoadMailboxData(Int64 accountId)
+        
+        public async Task<Tuple<ErrorCode, List<MailboxData>>> LoadMailboxData(Int64 accountId, Int32 page)
         {
             try
             {
+                Int32 offset = 10 * (page - 1);
                 var MailboxDataList = await _queryFactory.Query("Mailbox")
-                    .Select("")
+                    .Select("MailId", "Title", "ItemCode", "Amount", "IsRead")
+                    .Where("AccountId", accountId)
+                    .Limit(20).Offset(offset)
+                    .GetAsync<MailboxData>(); 
+
+                return new Tuple<ErrorCode, List<MailboxData>>(ErrorCode.None, MailboxDataList.ToList<MailboxData>());
             }
             catch
             {
-
+                _logger.ZLogError($"[GameDb.LoadMailboxData] ErrorCode : {ErrorCode.LoadMailBoxData_Fail_Exception}, AccountId: {accountId}");
+                return new Tuple<ErrorCode, List<MailboxData>>(ErrorCode.LoadMailBoxData_Fail_Exception, null);
             }
         }
-        */
+        
     }
 }

@@ -2,6 +2,7 @@
 using CloudStructures.Structures;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.Extensions.Options;
+using StackExchange.Redis;
 using TuesberryAPIServer.ModelDb;
 using ZLogger;
 
@@ -194,6 +195,57 @@ namespace TuesberryAPIServer.Services
             {
                 _logger.ZLogError($"[RedisDb.GetNotice] Redis error");
                 return new Tuple<ErrorCode, string>(ErrorCode.Get_Notice_Fail_Exception, null);
+            }
+        }
+
+        public async Task<ErrorCode> SetPageRead(Int64 accountId, Int32 page)
+        {
+            try
+            {
+                var redis = new RedisSet<Int32>(_redisCon, accountId.ToString(), null);
+                if(await redis.AddAsync(page) == false)
+                {
+                    _logger.ZLogError($"[SetRageRead] Error : {ErrorCode.SetPageRead_Fail_Duplicate}");
+                    return ErrorCode.SetPageRead_Fail_Duplicate;
+                }
+
+                return ErrorCode.None;
+            }
+            catch
+            {
+                _logger.ZLogError($"[SetRageRead] Error : {ErrorCode.SetPageRead_Fail_Exception}");
+                return ErrorCode.SetPageRead_Fail_Exception;
+            }
+        }
+
+        public async Task<Tuple<ErrorCode, bool>> IsReadPage(Int64 accountId, Int32 page)
+        {
+            try
+            {
+                var redis = new RedisSet<Int32>(_redisCon, accountId.ToString(), null);
+                var result = await redis.ContainsAsync(page);
+                return new Tuple<ErrorCode, bool>(ErrorCode.None, result);
+            }
+            catch
+            {
+                _logger.ZLogError($"[IsRageRead] Error : {ErrorCode.ReadPage_Fail_Exception}");
+                return new Tuple<ErrorCode, bool>(ErrorCode.ReadPage_Fail_Exception, false);
+            }
+        }
+
+        public async Task<bool> DelPageReadInfo(Int64 accountId)
+        {
+            try
+            {
+                var redis = new RedisSet<Int32>(_redisCon, accountId.ToString(), null);
+                var result = await redis.DeleteAsync();
+                return result;
+
+            }
+            catch
+            {
+                _logger.ZLogError($"[DelPageReadInfo] Error: {ErrorCode.DelPageReadInfo_Fail_Exception}");
+                return false;
             }
         }
     }

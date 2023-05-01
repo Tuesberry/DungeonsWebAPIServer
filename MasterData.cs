@@ -74,6 +74,10 @@
 
         public static string AppVersion { get; } = "1.0";
 
+        public static string MailboxTitle { get; } = "우편함";
+
+        public static string MailboxComment { get; } = "이 우편은 7일 뒤에 삭제됩니다.";
+
         // 아이템( Code, (Name, Attribute, Sell, Buy, UseLv, Attack, Defence, Magic, EnchanceCount, bOverlapped))
         public static Dictionary<Int32, Item> Items { get; } = new Dictionary<Int32, Item>()
         {

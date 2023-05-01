@@ -49,5 +49,19 @@
 
         Logout_Fail_Id_Not_Exist = 36,
         Logout_Fail_Exception = 37,
+
+        SetPageRead_Fail_Exception = 38,
+        SetPageRead_Fail_Duplicate = 39,
+        ReadPage_Fail_Exception = 40,
+        DelPageReadInfo_Fail_Exception = 41,
+
+        OpenMail_Fail_Exception = 42,
+        OpenMail_Fail_Request_Duplicate = 43,
+
+        LoadMailBoxData_Fail_Exception = 44,
+
+        LoadMail_Fail_Exception = 45,
+        LoadMail_Fail_Request_Duplicate = 46,
+
     }
 }

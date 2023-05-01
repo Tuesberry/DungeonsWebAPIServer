@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS GameDB. Mailbox
     Title VARCHAR(20) NOT NULL COMMENT '메일 제목',
     ItemCode INT NOT NULL COMMENT '아이템 코드',
     Amount INT NOT NULL COMMENT '아이템 수량',
-    ExpiryDate NOT NULL DATETIME COMMENT '만료 날짜',
+    ExpiryDate DATETIME NOT NULL COMMENT '만료 날짜',
     IsRead BOOL NOT NULL COMMENT '확인 여부',
 ) COMMENT '우편함 데이터';
 ```
