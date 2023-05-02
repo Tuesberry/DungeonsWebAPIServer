@@ -36,25 +36,8 @@ namespace TuesberryAPIServer.Controllers
                 return response;
             }
 
-            // page number 중복 확인 
-            var(errorCode, result) = await _memoryDb.IsReadPage(userInfo.AccountId, 1);
-            
-            if(errorCode != ErrorCode.None)
-            {
-                _logger.ZLogError($"[OpenMail] Is Read Page Fail, userId: {request.Id}");
-                response.Result = errorCode;
-                return response;
-            }
-
-            if(result)
-            {
-                _logger.ZLogError($"[OpenMail] OpenMail request duplicate, userId: {request.Id}");
-                response.Result = ErrorCode.OpenMail_Fail_Request_Duplicate;
-                return response;
-            }
-
             // load mailbox list
-            (errorCode, var mailList) = await _gameDb.LoadMailboxData(userInfo.AccountId, 1);
+            var (errorCode, mailList) = await _gameDb.LoadMailboxData(userInfo.AccountId, 1);
             if(errorCode != ErrorCode.None)
             {
                 _logger.ZLogError($"[OpenMail] Load Mail List Fail, userId : {request.Id}");
@@ -68,15 +51,6 @@ namespace TuesberryAPIServer.Controllers
             // set title & comment
             response.MailboxTitle = MasterData.MailboxTitle;
             response.MailboxComment = MasterData.MailboxComment;
-
-            // page 번호 기록
-            errorCode = await _memoryDb.SetPageRead(userInfo.AccountId, 1);
-            if(errorCode != ErrorCode.None)
-            {
-                _logger.ZLogError($"[OpenMail] Cannot Write Read Page , userId: {request.Id}");
-                response.Result = errorCode;
-                return response;
-            }
 
             return response;
         }
@@ -94,25 +68,8 @@ namespace TuesberryAPIServer.Controllers
                 return response;
             }
 
-            // page number 중복 확인 
-            var (errorCode, result) = await _memoryDb.IsReadPage(userInfo.AccountId, request.PageNum);
-
-            if (errorCode != ErrorCode.None)
-            {
-                _logger.ZLogError($"[LoadMail] Is Page Fail, userId: {request.Id}");
-                response.Result = errorCode;
-                return response;
-            }
-
-            if (result)
-            {
-                _logger.ZLogError($"[LoadMail] LoadMail request duplicate, userId: {request.Id}");
-                response.Result = ErrorCode.LoadMail_Fail_Request_Duplicate;
-                return response;
-            }
-
             // load mailbox list
-            (errorCode, var mailList) = await _gameDb.LoadMailboxData(userInfo.AccountId, request.PageNum);
+            var (errorCode, mailList) = await _gameDb.LoadMailboxData(userInfo.AccountId, request.PageNum);
             if (errorCode != ErrorCode.None)
             {
                 _logger.ZLogError($"[LoadMail] Load Mail List Fail, userId : {request.Id}");
@@ -123,14 +80,6 @@ namespace TuesberryAPIServer.Controllers
             _logger.ZLogInformation($"[LoadMail] Load Mail List, page:{request.PageNum}, mail num: {mailList.Count}");
             response.MailboxDatum = mailList;
 
-            // page 번호 기록
-            errorCode = await _memoryDb.SetPageRead(userInfo.AccountId, request.PageNum);
-            if (errorCode != ErrorCode.None)
-            {
-                _logger.ZLogError($"[LoadMail] Cannot Write Read Page , userId: {request.Id}");
-                response.Result = errorCode;
-                return response;
-            }
 
             return response;
         }
