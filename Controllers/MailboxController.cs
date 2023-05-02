@@ -24,9 +24,9 @@ namespace TuesberryAPIServer.Controllers
         }
 
         [HttpPost("OpenMailbox")]
-        public async Task<PkOpenMailResponse> OpenMailbox([FromBody]PkOpenMailRequest request)
+        public async Task<PkOpenMailboxResponse> OpenMailbox([FromBody]PkOpenMailboxRequest request)
         {
-            var response = new PkOpenMailResponse();
+            var response = new PkOpenMailboxResponse();
 
             // userInfo 가져오기
             AuthUser userInfo = _httpContextAccessor.HttpContext.Items[nameof(AuthUser)] as AuthUser;
@@ -82,9 +82,9 @@ namespace TuesberryAPIServer.Controllers
         }
 
         [HttpPost("LoadMail")]
-        public async Task<PkLoadMailResponse> LoadMailList([FromBody]PkLoadMailRequest request)
+        public async Task<PkLoadMailboxResponse> LoadMailList([FromBody]PkLoadMailboxRequest request)
         {
-            var response = new PkLoadMailResponse();
+            var response = new PkLoadMailboxResponse();
 
             // userInfo 가져오기
             AuthUser userInfo = _httpContextAccessor.HttpContext.Items[nameof(AuthUser)] as AuthUser;
@@ -93,6 +93,8 @@ namespace TuesberryAPIServer.Controllers
                 response.Result = ErrorCode.AuthToken_Access_Error;
                 return response;
             }
+
+            // TODO : page 범위 확인
 
             // page number 중복 확인 
             var (errorCode, result) = await _memoryDb.IsReadPage(userInfo.AccountId, request.PageNum);
@@ -147,7 +149,7 @@ namespace TuesberryAPIServer.Controllers
                 return response;
             }
 
-            // item 존재여부 확인
+            // item 존재여부 확인 & mail에서 item 정보 받아오기
             var (errorCode, mailItem) = await _gameDb.LoadMailItemData(userInfo.AccountId, request.MailId);
             if(errorCode != ErrorCode.None) 
             {
@@ -162,6 +164,8 @@ namespace TuesberryAPIServer.Controllers
                 response.Result = errorCode;
                 return response;
             }
+
+            // TODO : 해당 메일 삭제하기
 
             return response;
         }

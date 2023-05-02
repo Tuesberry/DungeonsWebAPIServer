@@ -3,7 +3,7 @@ using TuesberryAPIServer.ModelDb;
 
 namespace TuesberryAPIServer.ModelReqRes
 {
-    public class PkLoadMailRequest
+    public class PkLoadMailboxRequest
     {
         [Required(ErrorMessage = "Required")]
         public Int32 PageNum { get; set; } = 0;
@@ -22,7 +22,7 @@ namespace TuesberryAPIServer.ModelReqRes
         public string MasterDataVersion { get; set; } = string.Empty;
     }
 
-    public class PkLoadMailResponse
+    public class PkLoadMailboxResponse
     {
         public ErrorCode Result { get; set; } = ErrorCode.None;
 

@@ -3,7 +3,7 @@ using TuesberryAPIServer.ModelDb;
 
 namespace TuesberryAPIServer.ModelReqRes
 {
-    public class PkOpenMailRequest
+    public class PkOpenMailboxRequest
     {
         [Required(ErrorMessage = "Required")]
         [StringLength(15, MinimumLength = 4, ErrorMessage = "Id length is not appropriate")]
@@ -19,7 +19,7 @@ namespace TuesberryAPIServer.ModelReqRes
         public string MasterDataVersion { get; set; } = string.Empty;
     }
 
-    public class PkOpenMailResponse
+    public class PkOpenMailboxResponse
     {
         public ErrorCode Result { get; set; } = ErrorCode.None;
 
