@@ -17,8 +17,8 @@ namespace TuesberryAPIServer.Services
         IDbConnection _connection;
         MySqlCompiler _compiler;
 
-        public GameDb(ILogger<GameDb> logger, IOptions<DbConfig> options) 
-        { 
+        public GameDb(ILogger<GameDb> logger, IOptions<DbConfig> options)
+        {
             _logger = logger;
             _dbConfig = options;
 
@@ -31,7 +31,7 @@ namespace TuesberryAPIServer.Services
 
         public void Dispose()
         {
-            _connection.Close();    
+            _connection.Close();
         }
 
         public async Task<Tuple<ErrorCode, Int64>> CreateGameData(string userId)
@@ -49,7 +49,7 @@ namespace TuesberryAPIServer.Services
                     Stage = 0
                 });
 
-                if(accountId == 0)
+                if (accountId == 0)
                 {
                     _logger.ZLogError($"[AccountDb.CreateAccount] ErrorCode : {ErrorCode.Create_GameData_Fail_Duplicate}, UserId: {userId}");
                     return new Tuple<ErrorCode, Int64>(ErrorCode.Create_GameData_Fail_Duplicate, 0);
@@ -61,7 +61,7 @@ namespace TuesberryAPIServer.Services
             {
                 _logger.ZLogError($"[GameDb.CreateGameData] ErrorCode : {ErrorCode.Create_GameData_Fail_Exception}, UserId: {userId}");
                 return new Tuple<ErrorCode, Int64>(ErrorCode.Create_GameData_Fail_Exception, 0);
-            }   
+            }
         }
 
         public async Task<Tuple<ErrorCode, GameData, Int64>> LoadGameData(string userId)
@@ -74,9 +74,9 @@ namespace TuesberryAPIServer.Services
 
                 var accountId = await _queryFactory.Query("GameData")
                     .Select("AccountId")
-                    .Where("UserId", userId) .FirstOrDefaultAsync<Int64>();
+                    .Where("UserId", userId).FirstOrDefaultAsync<Int64>();
 
-                if(accountId == 0)
+                if (accountId == 0)
                 {
                     _logger.ZLogError($"[GameDb.CreateGameData] ErrorCode : {ErrorCode.Get_GameDate_Fail_Not_Exist}, UserId: {userId}");
                     return new Tuple<ErrorCode, GameData, Int64>(ErrorCode.Get_GameDate_Fail_Not_Exist, null, 0);
@@ -101,7 +101,7 @@ namespace TuesberryAPIServer.Services
                 itemData.Amount = 10;
 
                 var errorCode = await InsertItem(accountId, itemData);
-                if(errorCode != ErrorCode.None)
+                if (errorCode != ErrorCode.None)
                 {
                     _logger.ZLogError($"[GameDb.CreateDefaultItemData] ErrorCode : {errorCode}, AccountId: {accountId}");
                     return errorCode;
@@ -140,11 +140,11 @@ namespace TuesberryAPIServer.Services
                     // 이미 있는지 확인
                     var checkData = await _queryFactory.Query("ItemData")
                         .Select("ItemId", "Amount")
-                        .Where( new { AccountID = accountId, ItemCode = itemCode })
+                        .Where(new { AccountID = accountId, ItemCode = itemCode })
                         .GetAsync<ItemData>();
 
                     // check null
-                    if( checkData is null )
+                    if (checkData is null)
                     {
                         _logger.ZLogError($"[GameDb.InsertOrUpdateItem] data doesn't exist, AccountId: {accountId}");
                         return await InsertItem(accountId, itemData);
@@ -155,10 +155,10 @@ namespace TuesberryAPIServer.Services
 
                     // update info
                     var count = await _queryFactory.Query("ItemData")
-                        .Where( new { ItemId = refData.ItemId  })
+                        .Where(new { ItemId = refData.ItemId })
                         .UpdateAsync(new { Amount = refData.Amount + itemData.Amount });
 
-                    if(count != 1)
+                    if (count != 1)
                     {
                         _logger.ZLogError($"[GameDb.InsertOrUpdateItem] ErrorCode : {ErrorCode.InsertOrUpdate__Item_Data_Fail_Exception}, AccountId: {accountId}");
                         return ErrorCode.InsertOrUpdate__Item_Data_Fail_Exception;
@@ -170,7 +170,7 @@ namespace TuesberryAPIServer.Services
                     _logger.ZLogError($"[GameDb.InsertOrUpdateItem] data can't overlappe, AccountId: {accountId}");
                     return await InsertItem(accountId, itemData);
                 }
-                
+
                 return ErrorCode.None;
             }
             catch
@@ -210,7 +210,7 @@ namespace TuesberryAPIServer.Services
                 return ErrorCode.Insert_Item_Data_Fail_Exception;
             }
         }
-        
+
         public async Task<Tuple<ErrorCode, List<ItemData>>> LoadItemData(Int64 accountId)
         {
             try
@@ -227,7 +227,7 @@ namespace TuesberryAPIServer.Services
                 return new Tuple<ErrorCode, List<ItemData>>(ErrorCode.Get_ItemData_Fail_Exception, null);
             }
         }
-        
+
         public async Task<Tuple<ErrorCode, List<MailboxData>>> LoadMailboxData(Int64 accountId, Int32 page)
         {
             try
@@ -237,7 +237,7 @@ namespace TuesberryAPIServer.Services
                     .Select("MailId", "Title", "ItemCode", "Amount", "IsRead")
                     .Where("AccountId", accountId)
                     .Limit(20).Offset(offset)
-                    .GetAsync<MailboxData>(); 
+                    .GetAsync<MailboxData>();
 
                 return new Tuple<ErrorCode, List<MailboxData>>(ErrorCode.None, MailboxDataList.ToList<MailboxData>());
             }
@@ -247,6 +247,28 @@ namespace TuesberryAPIServer.Services
                 return new Tuple<ErrorCode, List<MailboxData>>(ErrorCode.LoadMailBoxData_Fail_Exception, null);
             }
         }
-        
+
+        public async Task<Tuple<ErrorCode, ItemData>> LoadMailItemData(Int64 accountId, Int32 mailId)
+        {
+            try
+            {
+                var mailItemData = await _queryFactory.Query("Mailbox")
+                    .Select("ItemCode", "Amount")
+                    .Where(new { AccountId = accountId, MailId = mailId})
+                    .GetAsync<ItemData>();
+
+                if(mailItemData is null)
+                {
+                    return new Tuple<ErrorCode, ItemData>(ErrorCode.LoadMailItem_Fail_Item_Not_Exist, null);
+                }
+
+                return new Tuple<ErrorCode, ItemData>(ErrorCode.None, mailItemData.First());
+            }
+            catch
+            {
+                _logger.ZLogError($"[GameDb.LoadMailItemData] ErrorCode : {ErrorCode.LoadMailItem_Fail_Exception}, AccountId: {accountId}");
+                return new Tuple<ErrorCode, ItemData>(ErrorCode.LoadMailItem_Fail_Exception, null);
+            }
+        }
     }
 }

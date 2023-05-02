@@ -63,5 +63,7 @@
         LoadMail_Fail_Exception = 45,
         LoadMail_Fail_Request_Duplicate = 46,
 
+        LoadMailItem_Fail_Exception = 47,
+        LoadMailItem_Fail_Item_Not_Exist = 48,
     }
 }

@@ -147,9 +147,25 @@ namespace TuesberryAPIServer.Controllers
                 return response;
             }
 
-            // item 받기
+            // item 존재여부 확인
+            var (errorCode, mailItem) = await _gameDb.LoadMailItemData(userInfo.AccountId, request.MailId);
+            if(errorCode != ErrorCode.None) 
+            {
+                response.Result = errorCode;
+                return response;
+            }
+
+            // item 받기  
+            errorCode = await _gameDb.InsertOrUpdateItem(userInfo.AccountId, mailItem);
+            if (errorCode != ErrorCode.None)
+            {
+                response.Result = errorCode;
+                return response;
+            }
 
             return response;
         }
+
+
     }
 }
