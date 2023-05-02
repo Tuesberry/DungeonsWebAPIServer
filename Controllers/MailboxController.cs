@@ -94,8 +94,6 @@ namespace TuesberryAPIServer.Controllers
                 return response;
             }
 
-            // TODO : page 범위 확인
-
             // page number 중복 확인 
             var (errorCode, result) = await _memoryDb.IsReadPage(userInfo.AccountId, request.PageNum);
 
@@ -153,23 +151,22 @@ namespace TuesberryAPIServer.Controllers
             var (errorCode, mailItem) = await _gameDb.LoadMailItemData(userInfo.AccountId, request.MailId);
             if(errorCode != ErrorCode.None) 
             {
+                _logger.ZLogError($"[GetMailItem] Load Mail Item Fail , userId: {request.Id}");
                 response.Result = errorCode;
                 return response;
             }
 
-            // item 받기  
-            errorCode = await _gameDb.InsertOrUpdateItem(userInfo.AccountId, mailItem);
+            // Item 받고, 메일 삭제
+            errorCode = await _gameDb.LoadAndDeleteItemFromMail(userInfo.AccountId, request.MailId);
             if (errorCode != ErrorCode.None)
             {
+                _logger.ZLogError($"[GetMailItem] Get Item & Delete Mail Fail , userId: {request.Id}");
                 response.Result = errorCode;
                 return response;
             }
 
-            // TODO : 해당 메일 삭제하기
-
+            _logger.ZLogInformation($"[GetMailItem] Get Item Complete, userId: {request.Id}");
             return response;
         }
-
-
     }
 }

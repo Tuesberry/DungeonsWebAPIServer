@@ -18,5 +18,9 @@ namespace TuesberryAPIServer.Services
 
         public Task<Tuple<ErrorCode, ItemData>> LoadMailItemData(Int64 accountId, Int32 mailId);
 
+        public Task<ErrorCode> DeleteMail(Int64 accountId, Int32 mailId);
+        
+        public Task<ErrorCode> LoadAndDeleteItemFromMail(Int64 accountId, Int32 mailId);
+
     }
 }

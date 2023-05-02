@@ -65,5 +65,11 @@
 
         LoadMailItem_Fail_Exception = 47,
         LoadMailItem_Fail_Item_Not_Exist = 48,
+
+        LoadAndDeleteItemFromMail_Fail_Item_Not_Exist = 49,
+        LoadAndDeleteItemFromMail_Fail_Exception = 50,
+
+        DeleteMail_Fail_Not_Exist = 51,
+        DeleteMail_Fail_Exception = 52,
     }
 }

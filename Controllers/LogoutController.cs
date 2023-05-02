@@ -42,6 +42,8 @@ namespace TuesberryAPIServer.Controllers
                 return response;
             }
 
+            // TODO : 우편함 정보도 삭제
+
             _logger.ZLogInformation($"[Logout] Complete, id: {request.Id}");
 
             return response;

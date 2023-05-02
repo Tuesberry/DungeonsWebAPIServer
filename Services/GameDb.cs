@@ -270,5 +270,56 @@ namespace TuesberryAPIServer.Services
                 return new Tuple<ErrorCode, ItemData>(ErrorCode.LoadMailItem_Fail_Exception, null);
             }
         }
+
+        public async Task<ErrorCode> DeleteMail(Int64 accountId, Int32 mailId)
+        {
+            try
+            {
+                var result = await _queryFactory.Query("Mailbox").Where(new { AccountId = accountId, MailId = mailId }).DeleteAsync();
+                _logger.ZLogInformation($"[GameDb.DeleteMail] Delete Result : {result}");
+                return ErrorCode.None;
+            }
+            catch
+            {
+                _logger.ZLogError($"[GameDb.DeleteMail] ErrorCode : {ErrorCode.DeleteMail_Fail_Exception}, AccountId: {accountId}");
+                return ErrorCode.DeleteMail_Fail_Exception;
+            }
+        }
+
+        public async Task<ErrorCode> LoadAndDeleteItemFromMail(Int64 accountId, Int32 mailId)
+        {
+            try
+            {
+                // load item
+                var (errorCode, mailItemData) = await LoadMailItemData(accountId, mailId);
+                if(errorCode != ErrorCode.None)
+                {
+                    _logger.ZLogError($"[GameDb.LoadAndDeleteItemFromMail] load Item Fail, AccountId: {accountId}");
+                    return errorCode;
+                }
+                // insert item
+                errorCode = await InsertOrUpdateItem(accountId, mailItemData);
+                if (errorCode != ErrorCode.None)
+                {
+                    _logger.ZLogError($"[GameDb.LoadAndDeleteItemFromMail] Insert Item Fail , AccountId: {accountId}");
+                    return errorCode;
+                }
+                // delete mail
+                errorCode = await DeleteMail(accountId, mailId);
+                if(errorCode != ErrorCode.None)
+                {
+                    _logger.ZLogError($"[GameDb.LoadAndDeleteItemFromMail] Insert Item Fail , AccountId: {accountId}");
+                    return errorCode;
+                }
+
+                return errorCode;
+            }
+            catch
+            {
+                _logger.ZLogError($"[GameDb.LoadAndDeleteItemFromMail] ErrorCode : {ErrorCode.LoadAndDeleteItemFromMail_Fail_Exception}, AccountId: {accountId}");
+                return ErrorCode.LoadAndDeleteItemFromMail_Fail_Exception;
+            }
+        }
+
     }
 }
