@@ -13,14 +13,17 @@ namespace TuesberryAPIServer.Services
         readonly ILogger<GameDb> _logger;
         readonly IOptions<DbConfig> _dbConfig;
 
+        readonly IMasterDb _masterDb;
+
         QueryFactory _queryFactory;
         IDbConnection _connection;
         MySqlCompiler _compiler;
 
-        public GameDb(ILogger<GameDb> logger, IOptions<DbConfig> options)
+        public GameDb(ILogger<GameDb> logger, IOptions<DbConfig> options, IMasterDb masterDb)
         {
             _logger = logger;
             _dbConfig = options;
+            _masterDb = masterDb;
 
             _connection = new MySqlConnection(_dbConfig.Value.GameDb);
             _connection.Open();
@@ -133,7 +136,7 @@ namespace TuesberryAPIServer.Services
                 Int32 itemCode = itemData.ItemCode;
 
                 // 겹침 가능 여부 확인
-                if (MasterData.Items[itemCode]._bOverlapped)
+                if (_masterDb.Items[itemCode].IsOverlapped)
                 {
                     // 겹쳐질 수 있음 => update
 
@@ -191,9 +194,9 @@ namespace TuesberryAPIServer.Services
                     AccountId = accountId,
                     ItemCode = itemCode,
                     Amount = itemData.Amount,
-                    Attack = MasterData.Items[itemCode]._attack,
-                    Defence = MasterData.Items[itemCode]._defence,
-                    Magic = MasterData.Items[itemCode]._magic,
+                    Attack = _masterDb.Items[itemCode].Attack,
+                    Defence = _masterDb.Items[itemCode].Defence,
+                    Magic = _masterDb.Items[itemCode].Magic,
                 });
 
                 if (count != 1)

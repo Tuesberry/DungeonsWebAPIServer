@@ -20,6 +20,7 @@ builder.Services.Configure<DbConfig>(configuration.GetSection(nameof(DbConfig)))
 builder.Services.AddTransient<IGameDb, GameDb>();
 builder.Services.AddTransient<IAccountDb, AccountDb>();
 builder.Services.AddSingleton<IMemoryDb, RedisDb>();
+builder.Services.AddSingleton<IMasterDb, MasterdataDb>();
 
 // log ¼³Á¤
 builder.Logging.ClearProviders();
@@ -47,4 +48,9 @@ app.MapControllers();
 var redisDb = app.Services.GetRequiredService<IMemoryDb>();
 redisDb.Init(configuration.GetSection("DbConfig")["Redis"]);
 
+// master data init
+var masterdataDb = app.Services.GetRequiredService<IMasterDb>();
+masterdataDb.Init();
+
+// running app
 app.Run(configuration["ServerAddress"]);

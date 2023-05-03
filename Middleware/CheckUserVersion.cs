@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using System.Text.Json;
+using TuesberryAPIServer.Services;
 using ZLogger;
 
 namespace TuesberryAPIServer.Middleware
@@ -8,11 +9,13 @@ namespace TuesberryAPIServer.Middleware
     {
         readonly RequestDelegate _next;
         readonly ILogger<CheckUserVersion> _logger;
+        readonly IMasterDb _masterDb;
 
-        public CheckUserVersion(RequestDelegate next, ILogger<CheckUserVersion> logger)
+        public CheckUserVersion(RequestDelegate next, ILogger<CheckUserVersion> logger, IMasterDb masterDb)
         {
             _next = next;
             _logger = logger;
+            _masterDb = masterDb;
         }
 
         public async Task InvokeAsync(HttpContext context)
@@ -85,17 +88,17 @@ namespace TuesberryAPIServer.Middleware
         
         bool IsInvalidVersion(HttpContext context, string appVersion, string masterDataVersion)
         {
-            if((appVersion != MasterData.AppVersion)&&(masterDataVersion != MasterData.MasterDataVersion))
+            if((appVersion != _masterDb.AppVersion)&&(masterDataVersion != _masterDb.MasterDataVersion))
             {
                 WriteErrorOnContext(context, ErrorCode.Invalid_AppVersion_And_MasterDataVersion);
                 return true;
             }
-            if(appVersion != MasterData.AppVersion)
+            if(appVersion != _masterDb.AppVersion)
             {
                 WriteErrorOnContext(context, ErrorCode.Invalid_AppVersion);
                 return true;
             }
-            if(masterDataVersion != MasterData.MasterDataVersion)
+            if(masterDataVersion != _masterDb.MasterDataVersion)
             {
                 WriteErrorOnContext(context, ErrorCode.Invalid_MasterDataVersion);
                 return true;

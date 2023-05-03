@@ -88,3 +88,71 @@ CREATE TABLE IF NOT EXISTS GameDB. PayInfo
     SerialNum VARCHAR(50) NOT NULL COMMENT '일련 번호'
 ) COMMENT '결제 정보';
 ```
+## Masterdata
+### ItemMasterData Table
+```sql
+CREATE TABLE IF NOT EXISTS GameDB. ItemMasterData
+(
+    ItemCode INT NOT NULL PRIMARY KEY COMMENT '아이템 코드',
+    Name VARCHAR(20) NOT NULL COMMENT '이름',
+    Attribute INT NOT NULL COMMENT '특성',
+    Sell INT NOT NULL COMMENT '판매 금액',
+    Buy INT NOT NULL COMMENT '구입 금액',
+    UseLv INT NOT NULL COMMENT '사용가능 레벨',
+    Attack INT NOT NULL COMMENT '공격력',
+    Defence INT NOT NULL COMMENT '방어력',
+    Magic INT NOT NULL COMMENT '마법력',
+    EnchanceCount INT NOT NULL COMMENT '최대 강화 횟수',
+    IsOverlapped BOOL NOT NULL COMMENT '겹침 가능 여부'
+) COMMENT '아이템 마스터 데이터';
+```
+
+### ItemAttributeMasterData Table
+```sql
+CREATE TABLE IF NOT EXISTS GameDB. ItemAttributeMasterData
+(
+    ItemCode INT NOT NULL PRIMARY KEY COMMENT '아이템 코드',
+    Name VARCHAR(20) NOT NULL COMMENT '특성 이름'
+) COMMENT '아이템 속성 마스터 데이터';
+```
+
+### AttendanceMasterData Table
+```sql
+CREATE TABLE IF NOT EXISTS GameDB. AttendanceMasterData
+(
+    Code INT NOT NULL PRIMARY KEY COMMENT '날짜',
+    ItemCode INT NOT NULL COMMENT '아이템 코드',
+    Count INT NOT NULL COMMENT '개수'
+) COMMENT '출석부보상 마스터 데이터';
+```
+
+### ProductMasterData Table
+```sql
+CREATE TABLE IF NOT EXISTS GameDB. ProductMasterData
+(
+    Code INT NOT NULL COMMENT '상품번호',
+    ItemCode INT NOT NULL COMMENT '아이템 코드',
+    ItemName VARCHAR(20) NOT NULL COMMENT '아이템 이름',
+    ItemCount INT NOT NULL COMMENT '개수'
+) COMMENT '인앱상품 마스터 데이터';
+```
+
+### StageItemMasterData Table
+```sql
+CREATE TABLE IF NOT EXISTS GameDB. StageItemMasterData
+(
+    Code INT NOT NULL COMMENT '스테이지 단계',
+    ItemCode INT NOT NULL COMMENT '파밍가능 아이템'
+) COMMENT '스테이지 아이템 마스터 데이터';
+```
+
+### StageNpcMasterData Table
+```sql
+CREATE TABLE IF NOT EXISTS GameDB. StageNpcMasterData
+(
+    Code INT NOT NULL COMMENT '스테이지 단계',
+    NPCCode INT NOT NULL COMMENT '공격 NPC',
+    Count INT NOT NULL COMMENT '개수',
+    Exp INT NOT NULL COMMENT '1개당 보상경험치'
+) COMMENT '스테이지 NPC 마스터 데이터';
+```

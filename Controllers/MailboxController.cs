@@ -14,13 +14,15 @@ namespace TuesberryAPIServer.Controllers
         readonly ILogger<MailboxController> _logger;
         readonly IGameDb _gameDb;
         readonly IMemoryDb _memoryDb;
+        readonly IMasterDb _masterDb;
 
-        public MailboxController(IHttpContextAccessor httpContextAccessor, ILogger<MailboxController> logger, IGameDb gameDb, IMemoryDb memoryDb)
+        public MailboxController(IHttpContextAccessor httpContextAccessor, ILogger<MailboxController> logger, IGameDb gameDb, IMemoryDb memoryDb, IMasterDb masterDb)
         {
             _httpContextAccessor = httpContextAccessor;
             _logger = logger;
             _gameDb = gameDb;
             _memoryDb = memoryDb;
+            _masterDb = masterDb;
         }
 
         [HttpPost("OpenMailbox")]
@@ -49,8 +51,8 @@ namespace TuesberryAPIServer.Controllers
             response.MailboxDatum = mailList;
 
             // set title & comment
-            response.MailboxTitle = MasterData.MailboxTitle;
-            response.MailboxComment = MasterData.MailboxComment;
+            response.MailboxTitle = _masterDb.MailboxTitle;
+            response.MailboxComment = _masterDb.MailboxComment;
 
             return response;
         }
