@@ -44,7 +44,7 @@ namespace TuesberryAPIServer.Services
                 var itemAttrData = _queryFactory.Query("ItemAttributeMasterData").Get<ItemAttributeMasterData>();
                 foreach( var itemAttr in itemAttrData)
                 {
-                    ItemAttributes.Add(itemAttr.ItemCode, itemAttr.Name);
+                    ItemAttributes.Add(itemAttr.Name, itemAttr.ItemCode);
                 }
                 // attenance master data
                 var attendanceData = _queryFactory.Query("AttendanceMasterData").Get<AttendanceMasterData>();
@@ -112,7 +112,7 @@ namespace TuesberryAPIServer.Services
 
         public Dictionary<Int32, ItemMasterData> Items { get; set; } = new Dictionary<Int32, ItemMasterData>();
 
-        public Dictionary<Int32, string> ItemAttributes { get; set; } = new Dictionary<Int32, string>();
+        public Dictionary<string, Int32> ItemAttributes { get; set; } = new Dictionary<string, Int32>();
 
         public Dictionary<Int32, AttendanceMasterData> AttendanceRewards { get; set; } = new Dictionary<Int32, AttendanceMasterData>();
 

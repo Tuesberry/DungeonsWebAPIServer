@@ -25,7 +25,12 @@ builder.Services.AddSingleton<IMasterDb, MasterdataDb>();
 // log ¼³Á¤
 builder.Logging.ClearProviders();
 builder.Logging.AddZLoggerConsole();
-
+/*
+builder.Logging.AddZLoggerConsole(options => 
+{ 
+    options.EnableStructuredLogging = true; 
+});
+*/
 // build app
 var app = builder.Build();
 

@@ -17,7 +17,6 @@ CREATE TABLE IF NOT EXISTS AccountDB. Account
 ) COMMENT '계정 정보 테이블';
 ```
 
-
 ## Game Database
 게임 데이터 데이터베이스
 ```sql
@@ -35,6 +34,7 @@ CREATE TABLE IF NOT EXISTS GameDB. GameData
     Hp INT NOT NULL DEFAULT(20) COMMENT '체력',
     Ap INT NOT NULL DEFAULT(10) COMMENT '공격력',
     Mp INT NOT NULL DEFAULT(10) COMMENT '마력',
+    Money INT NOT NULL DEFAULT(0) COMMENT '돈',
     Stage INT NOT NULL DEFAULT(0) COMMENT '최종 클리어 스테이지 번호'
 ) COMMENT '플레이어 게임 데이터';
 ```
@@ -43,14 +43,14 @@ CREATE TABLE IF NOT EXISTS GameDB. GameData
 ```sql
 CREATE TABLE IF NOT EXISTS GameDB. ItemData
 (
-    ItemId BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '아이템 번호',
+    UserItemId BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '아이템 번호',
     AccountId BIGINT NOT NULL COMMENT '계정 번호',
     ItemCode INT NOT NULL COMMENT '아이템 코드',
     Amount INT NOT NULL DEFAULT(1) COMMENT '수량',
     EnchanceCount INT NOT NULL DEFAULT(0) COMMENT '강화 횟수',
     Attack INT NOT NULL COMMENT '공격력',
     Defence INT NOT NULL COMMENT '방어력',
-    Magic INT NOT NULL COMMENT '마법력',
+    Magic INT NOT NULL COMMENT '마법력'
 ) COMMENT '플레이어 아이템 데이터';
 ```
 
@@ -60,12 +60,26 @@ CREATE TABLE IF NOT EXISTS GameDB. Mailbox
 (
     MailId BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '메일 번호',
     AccountId BIGINT NOT NULL COMMENT '계정 번호',
-    Title VARCHAR(20) NOT NULL COMMENT '메일 제목',
-    ItemCode INT NOT NULL COMMENT '아이템 코드',
-    Amount INT NOT NULL COMMENT '아이템 수량',
+    Title VARCHAR(40) NOT NULL COMMENT '메일 제목',
     ExpiryDate DATETIME NOT NULL COMMENT '만료 날짜',
     IsRead BOOL NOT NULL COMMENT '확인 여부',
+    Comment VARCHAR(100) NOT NULL COMMENT '메일 내용'
 ) COMMENT '우편함 데이터';
+```
+
+### MailboxItem Table
+```sql
+CREATE TABLE IF NOT EXISTS GameDB. MailboxItem
+(
+    MailId BIGINT NOT NULL COMMENT '메일 번호',
+    ItemCode INT NOT NULL COMMENT '아이템 코드',
+    Amount INT NOT NULL COMMENT '아이템 수량',
+    EnchanceCount INT NOT NULL DEFAULT(0) COMMENT '강화 횟수',
+    Attack INT NOT NULL COMMENT '공격력',
+    Defence INT NOT NULL COMMENT '방어력',
+    Magic INT NOT NULL COMMENT '마법력',
+    FOREIGN KEY(MailId) REFERENCES Mailbox(MailId) ON DELETE Cascade
+) COMMENT '우편함 아이템 데이터';
 ```
 
 ### Attendance Table
@@ -74,7 +88,7 @@ CREATE TABLE IF NOT EXISTS GameDB. Attendance
 (
     AccountId BIGINT NOT NULL PRIMARY KEY COMMENT '계정 번호',
     LastCheckDate DATE NOT NULL COMMENT '마지막 출석 날짜',
-    IsChecked BOOL NOT NULL COMMENT '출석 여부'
+    ContinuousPeriod INT NOT NULL COMMENT '연속 출석 기간'
 ) COMMENT '출석부 데이터';
 ```
 

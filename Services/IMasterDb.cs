@@ -16,7 +16,7 @@ namespace TuesberryAPIServer.Services
         
         public Dictionary<Int32, ItemMasterData> Items { get; set; }
         
-        public Dictionary<Int32, string> ItemAttributes { get; set; }
+        public Dictionary<string, Int32> ItemAttributes { get; set; }
 
         public Dictionary<Int32, AttendanceMasterData> AttendanceRewards { get; set; }
 

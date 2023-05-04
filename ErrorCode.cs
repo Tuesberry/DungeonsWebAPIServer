@@ -31,8 +31,8 @@
         Create_GameData_Fail_Exception = 24,
         Create_GameData_Fail_Duplicate = 25,
 
-        Get_GameDate_Fail_Not_Exist = 26,
-        Get_GameData_Fail_Exception = 27,
+        Load_GameDate_Fail_Not_Exist = 26,
+        Load_GameData_Fail_Exception = 27,
 
         Create_Item_Data_Fail_Duplicate= 28,
         Create_Item_Data_Fail_Exception= 29,
@@ -41,9 +41,9 @@
         Insert_Item_Data_Fail_Exception = 31,
 
         InsertOrUpdate_Item_Data_Fail_Duplicate = 32,
-        InsertOrUpdate__Item_Data_Fail_Exception = 33,
+        InsertOrUpdate_Item_Data_Fail_Exception = 33,
 
-        Get_ItemData_Fail_Exception = 34,
+        Load_ItemData_Fail_Exception = 34,
 
         Get_Notice_Fail_Exception = 35,
 
@@ -58,18 +58,32 @@
         OpenMail_Fail_Exception = 42,
         OpenMail_Fail_Request_Duplicate = 43,
 
-        LoadMailBoxData_Fail_Exception = 44,
+        LoadMailList_Fail_Exception = 44,
+        LoadMailList_Fail_Inappropriate_Page_Range = 45,
+        LoadMailList_Fail_Not_Exist_In_This_Page = 46,
 
-        LoadMail_Fail_Exception = 45,
-        LoadMail_Fail_Request_Duplicate = 46,
+        LoadMail_Fail_Exception = 47,
+        LoadMail_Fail_Request_Duplicate = 48,
 
-        LoadMailItem_Fail_Exception = 47,
-        LoadMailItem_Fail_Item_Not_Exist = 48,
+        LoadMailItem_Fail_Exception = 49,
+        LoadMailItem_Fail_Item_Not_Exist = 50,
 
-        LoadAndDeleteItemFromMail_Fail_Item_Not_Exist = 49,
-        LoadAndDeleteItemFromMail_Fail_Exception = 50,
+        ReceiveMailItem_Fail_Item_Not_Exist = 51,
+        ReceiveMailItem_Fail_Exception = 52,
+        ReceiveMailItem_Fail_Inappropriate_MailId = 53,
+        ReceiveMailItem_Fail_Add_Item_Exception = 54,
+        ReceiveMailItem_Fail_Set_Read_Exception = 55,
 
-        DeleteMail_Fail_Not_Exist = 51,
-        DeleteMail_Fail_Exception = 52,
+        DeleteMail_Fail_Not_Exist = 56,
+        DeleteMail_Fail_Exception = 57,
+        DeleteMail_Fail_Inappropriate_MailId = 58,
+
+        DeleteGameData_Fail_Exception = 59,
+        DeleteAccountData_Fail_Exception = 60,
+
+        UpdateMoney_Fail_Exception = 61,
+
+        LoadMailDetail_Fail_Not_Exist = 62,
+        LoadMailDetail_Fail_Exception = 63,
     }
 }

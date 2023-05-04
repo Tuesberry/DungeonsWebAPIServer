@@ -34,27 +34,44 @@ namespace TuesberryAPIServer.Controllers
                 return response;
             }
 
-            _logger.ZLogInformation($"[CreateAccount] Userid: {request.Id}");
+            _logger.ZLogDebug($"[CreateAccount] UserId = {request.Id}");
 
             // create game data
             (errorCode, var accountId) = await _gameDb.CreateGameData(request.Id);
             if(errorCode != ErrorCode.None) 
             {
+                // rollback, Delete AccountData
+                if(await _accountDb.DeleteAccount(request.Id) != ErrorCode.None)
+                {
+                    _logger.ZLogError($"[CreateAccount.CreateGameData] Rollback Error, ErrorCode = {errorCode}, UserId = {request.Id}");
+                }
+               
+                // return
                 response.Result = errorCode;
                 return response;
             }
 
-            _logger.ZLogInformation($"[CreateAccount.CreateGameData] id: {request.Id}, accountId: {accountId}");
+            _logger.ZLogDebug($"[CreateAccount.CreateGameData] UserId = {request.Id}, AccountId = {accountId}");
 
             // create default item data
             errorCode = await _gameDb.CreateDefaultItemData(accountId);
             if(errorCode != ErrorCode.None)
             {
+                // rollback, Delete AccountData & GameData
+                if (await _accountDb.DeleteAccount(request.Id) != ErrorCode.None)
+                {
+                    _logger.ZLogError($"[CreateAccount.CreateDefaultItemData] Rollback Error, UserId = {request.Id}");
+                }
+                if (await _gameDb.DeleteGameData(request.Id) != ErrorCode.None)
+                {
+                    _logger.ZLogError($"[CreateAccount.CreateGameData] Rollback Error, UserId = {request.Id}");
+                }
+                // return 
                 response.Result = errorCode;
                 return response;
             }
 
-            _logger.ZLogInformation($"[CreateAccount.CreateDefaultItemData] id: {request.Id}, accountId: {accountId}");
+            _logger.ZLogDebug($"[CreateAccount.CreateDefaultItemData] UserId = {request.Id}, AccountId = {accountId}");
 
             return response;
         }
