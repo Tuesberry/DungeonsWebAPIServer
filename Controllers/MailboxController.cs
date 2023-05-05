@@ -57,7 +57,7 @@ namespace TuesberryAPIServer.Controllers
             return response;
         }
 
-        [HttpPost("LoadMail")]
+        [HttpPost("LoadMailbox")]
         public async Task<PkLoadMailboxResponse> LoadMailList([FromBody]PkLoadMailboxRequest request)
         {
             var response = new PkLoadMailboxResponse();
@@ -86,10 +86,10 @@ namespace TuesberryAPIServer.Controllers
             return response;
         }
 
-        [HttpPost("GetMailDetail")]
-        public async Task<PKGetMailDetailResponse> GetMailDetail([FromBody]PKGetMailDetailRequest request)
+        [HttpPost("LoadMailDetail")]
+        public async Task<PKLoadMailDetailResponse> LoadMailDetail([FromBody]PKLoadMailDetailRequest request)
         {
-            var response = new PKGetMailDetailResponse();
+            var response = new PKLoadMailDetailResponse();
 
             AuthUser userInfo = _httpContextAccessor.HttpContext.Items[nameof(AuthUser)] as AuthUser;
             if (userInfo is null)
@@ -112,10 +112,10 @@ namespace TuesberryAPIServer.Controllers
             return response;
         }
 
-        [HttpPost("GetMailItem")]
-        public async Task<PkGetMailItemResponse> GetMailItem([FromBody]PkGetMailItemRequest request)
+        [HttpPost("ReceiveMailItem")]
+        public async Task<PkReceiveMailItemResponse> ReceiveMailItem([FromBody]PkReceiveMailItemRequest request)
         {
-            var response = new PkGetMailItemResponse();
+            var response = new PkReceiveMailItemResponse();
 
             AuthUser userInfo = _httpContextAccessor.HttpContext.Items[nameof(AuthUser)] as AuthUser;
             if (userInfo is null)

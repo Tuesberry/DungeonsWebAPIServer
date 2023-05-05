@@ -60,7 +60,7 @@ namespace TuesberryAPIServer.Middleware
             }
 
             // log
-            _logger.ZLogInformation($"[CheckUserVersion] Check User Version Complete");
+            _logger.ZLogDebug($"[CheckUserVersion] Check User Version Complete");
 
             // position reset
             context.Request.Body.Position = 0;

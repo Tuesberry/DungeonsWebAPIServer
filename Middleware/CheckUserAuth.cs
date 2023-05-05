@@ -80,7 +80,7 @@ namespace TuesberryAPIServer.Middleware
             }
 
             // log
-            _logger.ZLogInformation($"[CheckUserAuth] Check User Auth Complete");
+            _logger.ZLogDebug($"[CheckUserAuth] Check User Auth Complete, UserId = {userId}");
 
             // position reset
             context.Request.Body.Position = 0;

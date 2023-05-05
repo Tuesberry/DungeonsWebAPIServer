@@ -92,7 +92,7 @@ namespace TuesberryAPIServer.Services
                     }
                 }
 
-                _logger.ZLogInformation($"[MasterdataDb.Init] Init Master Data Complete");
+                _logger.ZLogDebug($"[MasterdataDb.Init] Init Master Data Complete");
                 _connection.Close();
             }
             catch

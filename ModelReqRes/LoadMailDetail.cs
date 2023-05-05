@@ -2,7 +2,7 @@
 
 namespace TuesberryAPIServer.ModelReqRes
 {
-    public class PkGetMailItemRequest
+    public class PKLoadMailDetailRequest
     {
         [Required(ErrorMessage = "Required")]
         public Int32 MailId { get; set; } = 0;
@@ -21,8 +21,9 @@ namespace TuesberryAPIServer.ModelReqRes
         public string MasterDataVersion { get; set; } = string.Empty;
     }
 
-    public class PkGetMailItemResponse
+    public class PKLoadMailDetailResponse
     {
         public ErrorCode Result { get; set; } = ErrorCode.None;
+        public string Detail { get; set; } = string.Empty;
     }
 }

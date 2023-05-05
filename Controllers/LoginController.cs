@@ -41,10 +41,11 @@ namespace TuesberryAPIServer.Controllers
                 return response;
             }
 
-            // get GameData
+            // load GameData
             (errorCode, var gameData, var accountId) = await _gameDb.LoadGameData(request.Id);
             if (errorCode != ErrorCode.None)
             {
+                _logger.ZLogError($"[LoginController] Load GameData Fail, UserId = {request.Id}");
                 response.Result = errorCode;
                 return response;
             }
@@ -56,16 +57,18 @@ namespace TuesberryAPIServer.Controllers
             errorCode = await _memoryDb.RegistUserAsync(request.Id, authToken, accountId);
             if(errorCode != ErrorCode.None)
             {
+                _logger.ZLogError($"[LoginController] Create AuthToken Fail, UserId = {request.Id}");
                 response.Result = errorCode;
                 return response;
             }
 
             response.Authtoken = authToken;
 
-            // get ItemData
+            // load ItemData
             (errorCode, var itemDatum) = await _gameDb.LoadItemData(accountId);
             if(errorCode != ErrorCode.None)
             {
+                _logger.ZLogError($"[LoginController] Load ItemData Fail, UserId = {request.Id}");
                 response.Result = errorCode;
                 return response;
             }
@@ -76,13 +79,14 @@ namespace TuesberryAPIServer.Controllers
             (errorCode, string notice) = await _memoryDb.GetNotice();
             if(errorCode != ErrorCode.None) 
             {
+                _logger.ZLogError($"[LoginController] Load Notice Fail, UserId = {request.Id}");
                 response.Result = errorCode;
                 return response;
             }
 
             response.Notice = notice;
 
-            _logger.ZLogInformation($"[LoginController.Login] id: {request.Id}, pw: {request.Pw}");
+            _logger.ZLogDebug($"[LoginController.Login] UserId = {request.Id}, Pw = {request.Pw}");
             return response;
         }
     }

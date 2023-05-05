@@ -14,13 +14,14 @@ namespace TuesberryAPIServer.Services
         public Task<ErrorCode> DeleteGameData(string userId);
 
         // --------- Item Data --------- //
-        public Task<ErrorCode> CreateDefaultItemData(Int64 accountId);  
-
-        public Task<ErrorCode> InsertOrUpdateItem(Int64 accountId, ItemData itemData);
+        public Task<ErrorCode> CreateDefaultItemData(Int64 accountId);
 
         public Task<Tuple<ErrorCode, List<ItemData>>> LoadItemData(Int64 accountId);
 
-        //public Task<ErrorCode> DeleteOrUpdateItemData(Int64 accountId, ItemData itemData);
+        public Task<ErrorCode> InsertItem(Int64 accountId, ItemData itemData);
+
+        public Task<ErrorCode> InsertOrUpdateItem(Int64 accountId, ItemData itemData);
+
 
         // --------- Mailbox --------- //
 
@@ -32,11 +33,20 @@ namespace TuesberryAPIServer.Services
 
         public Task<ErrorCode> ReceiveMailItem(Int64 accountId, Int32 mailId);
 
+        public Task<ErrorCode> SetMailRead(Int64 accountId, Int32 mailId);
+
         public Task<ErrorCode> DeleteMail(Int64 accountId, Int32 mailId);
 
         public Task<bool> IsValidMailId(Int64 accountId, Int32 mailId);
         
-        public Task<ErrorCode> InsertMail(Int64 account, List<MailboxData> itemData);
+        public Task<Tuple<ErrorCode, Int32>> InsertMail(Int64 accountId, MailboxData mailData, string comment);
 
+        // --------- Attendance --------- //
+
+        public Task<ErrorCode> CreateAttendanceData(Int64 accountId);
+        
+        public Task<Tuple<ErrorCode, AttendanceData>> LoadAttendanceData(Int64 accountId);
+
+        public Task<ErrorCode> UpdateAttendanceData(Int64 accountId,  AttendanceData attendanceData);
     }
 }

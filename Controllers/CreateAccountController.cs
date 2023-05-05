@@ -51,6 +51,17 @@ namespace TuesberryAPIServer.Controllers
                 return response;
             }
 
+            // create Attendance data
+            errorCode = await _gameDb.CreateAttendanceData(accountId);
+            if(errorCode != ErrorCode.None) 
+            {
+                // rollback, Delete AccountData & GameData
+                await RollbackAllData(request.Id);
+                // return
+                response.Result = errorCode;
+                return response;
+            }
+
             _logger.ZLogDebug($"[CreateAccount.CreateGameData] UserId = {request.Id}, AccountId = {accountId}");
 
             // create default item data
@@ -58,22 +69,32 @@ namespace TuesberryAPIServer.Controllers
             if(errorCode != ErrorCode.None)
             {
                 // rollback, Delete AccountData & GameData
-                if (await _accountDb.DeleteAccount(request.Id) != ErrorCode.None)
-                {
-                    _logger.ZLogError($"[CreateAccount.CreateDefaultItemData] Rollback Error, UserId = {request.Id}");
-                }
-                if (await _gameDb.DeleteGameData(request.Id) != ErrorCode.None)
-                {
-                    _logger.ZLogError($"[CreateAccount.CreateGameData] Rollback Error, UserId = {request.Id}");
-                }
+                await RollbackAllData(request.Id);
                 // return 
                 response.Result = errorCode;
                 return response;
             }
 
             _logger.ZLogDebug($"[CreateAccount.CreateDefaultItemData] UserId = {request.Id}, AccountId = {accountId}");
-
             return response;
+        }
+
+        async Task<ErrorCode> RollbackAllData(string userId)
+        {
+            if (await _accountDb.DeleteAccount(userId) != ErrorCode.None)
+            {
+                _logger.ZLogError($"[RollbackAllData] ErrorCode = {ErrorCode.Rollback_Delete_Account_Fail}, UserId = {userId}");
+                return ErrorCode.Rollback_Delete_Account_Fail;
+            }
+            
+            if (await _gameDb.DeleteGameData(userId) != ErrorCode.None)
+            {
+                _logger.ZLogError($"[RollbackAllData] ErroCode = {ErrorCode.Rollback_Delete_GameData_Fail}, UserId = {userId}");
+                return ErrorCode.Rollback_Delete_GameData_Fail;
+            }
+
+            _logger.ZLogDebug($"[RollbackAllData] Complete, UserId = {userId}");
+            return ErrorCode.None;
         }
     }
 }

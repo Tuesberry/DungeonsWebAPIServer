@@ -42,10 +42,7 @@ namespace TuesberryAPIServer.Controllers
                 return response;
             }
 
-            // TODO : 우편함 정보도 삭제
-
-            _logger.ZLogInformation($"[Logout] Complete, id: {request.Id}");
-
+            _logger.ZLogDebug($"[Logout] Complete, UserId = {request.Id}");
             return response;
         }
 

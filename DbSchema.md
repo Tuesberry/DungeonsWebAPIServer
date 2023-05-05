@@ -88,7 +88,8 @@ CREATE TABLE IF NOT EXISTS GameDB. Attendance
 (
     AccountId BIGINT NOT NULL PRIMARY KEY COMMENT '계정 번호',
     LastCheckDate DATE NOT NULL COMMENT '마지막 출석 날짜',
-    ContinuousPeriod INT NOT NULL COMMENT '연속 출석 기간'
+    ContinuousPeriod INT NOT NULL DEFAULT(0) COMMENT '연속 출석 기간',
+    FOREIGN KEY(AccountId) REFERENCES GameData(AccountId) ON DELETE Cascade
 ) COMMENT '출석부 데이터';
 ```
 
