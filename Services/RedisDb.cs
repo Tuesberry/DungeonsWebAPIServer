@@ -23,7 +23,7 @@ namespace TuesberryAPIServer.Services
             var config = new RedisConfig("default", address);
             _redisCon = new RedisConnection(config);
 
-            _logger.ZLogDebug($"UserDbAddress:{address}");
+            _logger.ZLogDebug($"UserDbAddress = {address}");
         }
 
         public async Task<ErrorCode> RegistUserAsync(string id, string authToken, Int64 accountId)
@@ -144,15 +144,15 @@ namespace TuesberryAPIServer.Services
                 var redis = new RedisString<AuthUser>(_redisCon, key, null);
                 if(await redis.SetAsync(new AuthUser(), null, StackExchange.Redis.When.NotExists) == false)
                 {
-                    _logger.ZLogError($"[RedisDb.SetUserReqLockAsync] Error : Key Duplicate");
+                    _logger.ZLogError($"[RedisDb.SetUserReqLockAsync] Error = Key Duplicate, key = {key}");
                     return false;
                 }
-                _logger.ZLogInformation("[RedisDb.SetUserReqLock] complete");
+                _logger.ZLogDebug($"[RedisDb.SetUserReqLock] complete, key = {key}");
                 return true;
             }
             catch
             {
-                _logger.ZLogError($"[RedisDb.SetUserReqLockAsync] Redis Connection Error");
+                _logger.ZLogError($"[RedisDb.SetUserReqLockAsync] Redis Connection Error, key = {key}");
                 return false;
             }
         }

@@ -199,6 +199,30 @@ namespace TuesberryAPIServer.Services
             }
         }
 
+        public async Task<Tuple<ErrorCode, ItemData>> LoadItemData(Int64 accountId, Int32 userItemId)
+        {
+            try
+            {
+                var itemData = await _queryFactory.Query("ItemData")
+                    .Select("UserItemId", "ItemCode", "Amount", "EnchanceCount", "Attack", "Defence", "Magic")
+                    .Where(new { AccountId = accountId, UserItemId = userItemId })
+                    .FirstAsync<ItemData>();
+
+                if(itemData is null)
+                {
+                    _logger.ZLogError($"[GameDb.LoadItemData] ErrorCode = {ErrorCode.Load_ItemData_Fail_Not_Exist}, AccountId = {accountId}, UserItemId = {userItemId}");
+                    return new Tuple<ErrorCode, ItemData>(ErrorCode.Load_ItemData_Fail_Not_Exist, null);
+                }
+
+                return new Tuple<ErrorCode, ItemData>(ErrorCode.None, itemData);
+            }
+            catch
+            {
+                _logger.ZLogError($"[GameDb.LoadItemData] ErrorCode = {ErrorCode.Load_ItemData_Fail_Exception}, AccountId = {accountId}, UserItemId = {userItemId}");
+                return new Tuple<ErrorCode, ItemData>(ErrorCode.Load_ItemData_Fail_Exception, null);
+            }
+        }
+
         public async Task<ErrorCode> InsertItem(Int64 accountId, ItemData itemData)
         {
             try
@@ -307,6 +331,61 @@ namespace TuesberryAPIServer.Services
             {
                 _logger.ZLogError($"[GameDb.InsertOrUpdateItem] ErrorCode : {ErrorCode.InsertOrUpdate_Item_Data_Fail_Exception}, AccountId: {accountId}");
                 return ErrorCode.InsertOrUpdate_Item_Data_Fail_Exception;
+            }
+        }
+
+        public async Task<ErrorCode> UpdateItemData(Int64 accountId, ItemData itemData)
+        {
+            try
+            {
+                var result = await _queryFactory.Query("ItemData")
+                    .Where(new { AccountId = accountId, UserItemId = itemData.UserItemId })
+                    .UpdateAsync(new
+                    {
+                        Amount = itemData.Amount,
+                        EnchanceCount = itemData.EnchanceCount,
+                        Attack = itemData.Attack,
+                        Defence = itemData.Defence,
+                        Magic = itemData.Magic
+                    });
+
+                if(result != 1)
+                {
+                    _logger.ZLogError($"[GameDb.UpdateItemData] ErrorCode = {ErrorCode.UpdateItemData_Fail_Item_Not_Exist}, AccountId = {accountId}, UserItemId = {itemData.UserItemId}");
+                    return ErrorCode.UpdateItemData_Fail_Item_Not_Exist;
+                }
+
+                _logger.ZLogDebug($"[GameDb.UpdateItemData] Complete, AccountId = {accountId}, UserItemId = {itemData.UserItemId}");
+                return ErrorCode.None;
+            }
+            catch
+            {
+                _logger.ZLogError($"[GameDb.UpdateItemData] ErrorCode = {ErrorCode.UpdateItemData_Fail_Exception}, AccountId = {accountId}, UserItemId = {itemData.UserItemId}");
+                return ErrorCode.UpdateItemData_Fail_Exception;
+            }
+        }
+
+        public async Task<ErrorCode> DeleteItemData(Int64 accountId, Int32 userItemId)
+        {
+            try
+            {
+                var result = await _queryFactory.Query("ItemData")
+                    .Where(new { AccountId = accountId, UserItemId = userItemId })
+                    .DeleteAsync();
+
+                if(result != 1)
+                {
+                    _logger.ZLogError($"[GameDb.DeleteItemData] ErrorCode = {ErrorCode.DeleteItemData_Fail_Invalid_Data}, AccountId = {accountId}, UserItemId = {userItemId}");
+                    return ErrorCode.DeleteItemData_Fail_Invalid_Data;
+                }
+
+                _logger.ZLogDebug($"[GameDb.DeleteItemData] Complete, AccountId = {accountId}, UserItemId = {userItemId}");
+                return ErrorCode.None;
+            }
+            catch
+            {
+                _logger.ZLogError($"[GameDb.DeleteItemData] ErrorCode = {ErrorCode.DeleteItemData_Fail_Exception}, AccountId = {accountId}, UserItemId = {userItemId}");
+                return ErrorCode.DeleteItemData_Fail_Exception;
             }
         }
 

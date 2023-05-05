@@ -8,10 +8,10 @@
         public Int32 Sell { get; set; } =0;
         public Int32 Buy { get; set; } = 0;
         public Int32 UseLv { get; set; } = 0;
-        public Int32 Attack { get; set; } = 0;
-        public Int32 Defence { get; set; } = 0;
-        public Int32 Magic { get; set; } = 0;
-        public Int32 EnchanceCount { get; set; } = 0;
+        public Decimal Attack { get; set; } = 0;
+        public Decimal Defence { get; set; } = 0;
+        public Decimal Magic { get; set; } = 0;
+        public Int32 EnchanceMaxCount { get; set; } = 0;
         public bool IsOverlapped { get; set; } = false;
     }
 

@@ -106,6 +106,14 @@
         IsDuplicatePayment_Fail_Exception = 77,
 
         InsertPaymentData_Fail_Exception = 78,
-        InsertPaymentData_Fail_Duplicate = 79
+        InsertPaymentData_Fail_Duplicate = 79,
+
+        Enchance_Fail_Enchance_Count_Exceed = 80,
+
+        UpdateItemData_Fail_Exception = 81,
+        UpdateItemData_Fail_Item_Not_Exist = 82,
+
+        DeleteItemData_Fail_Exception = 83,
+        DeleteItemData_Fail_Invalid_Data = 84,
     }
 }

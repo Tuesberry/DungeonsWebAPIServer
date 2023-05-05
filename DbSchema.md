@@ -48,9 +48,9 @@ CREATE TABLE IF NOT EXISTS GameDB. ItemData
     ItemCode INT NOT NULL COMMENT '아이템 코드',
     Amount INT NOT NULL DEFAULT(1) COMMENT '수량',
     EnchanceCount INT NOT NULL DEFAULT(0) COMMENT '강화 횟수',
-    Attack INT NOT NULL COMMENT '공격력',
-    Defence INT NOT NULL COMMENT '방어력',
-    Magic INT NOT NULL COMMENT '마법력'
+    Attack DECIMAL(12,2) NOT NULL COMMENT '공격력',
+    Defence DECIMAL(12,2) NOT NULL COMMENT '방어력',
+    Magic DECIMAL(12,2) NOT NULL COMMENT '마법력'
 ) COMMENT '플레이어 아이템 데이터';
 ```
 
@@ -117,7 +117,7 @@ CREATE TABLE IF NOT EXISTS GameDB. ItemMasterData
     Attack INT NOT NULL COMMENT '공격력',
     Defence INT NOT NULL COMMENT '방어력',
     Magic INT NOT NULL COMMENT '마법력',
-    EnchanceCount INT NOT NULL COMMENT '최대 강화 횟수',
+    EnchanceMaxCount INT NOT NULL COMMENT '최대 강화 횟수',
     IsOverlapped BOOL NOT NULL COMMENT '겹침 가능 여부'
 ) COMMENT '아이템 마스터 데이터';
 ```

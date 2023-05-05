@@ -16,9 +16,9 @@
         public Int32 ItemCode { get; set; } = 0;
         public Int32 Amount { get; set; } = 0;   
         public Int32 EnchanceCount { get; set; } = 0;
-        public Int32 Attack { get; set; } = 0;
-        public Int32 Defence { get; set; } = 0;
-        public Int32 Magic { get; set; } = 0;
+        public Decimal Attack { get; set; } = 0;
+        public Decimal Defence { get; set; } = 0;
+        public Decimal Magic { get; set; } = 0;
     }
 
 }
