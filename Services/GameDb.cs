@@ -388,7 +388,7 @@ namespace TuesberryAPIServer.Services
         {
             try
             {
-                // Check if the user's email is
+                // Check Mail Valid
                 var result = await IsValidMailId(accountId, mailId);
                 if (!result)
                 {
@@ -446,7 +446,7 @@ namespace TuesberryAPIServer.Services
         {
             try
             {
-                // Check if the user's email is
+                // Check Mail Valid
                 var result = await IsValidMailId(accountId, mailId);
                 if(!result)
                 {
@@ -738,6 +738,56 @@ namespace TuesberryAPIServer.Services
             {
                 _logger.ZLogError($"[UpdateAttendanceData] ErrorCode = {ErrorCode.UpdateAttendanceDate_Fail_Exceiption}, AccountId = {accountId}");
                 return ErrorCode.UpdateAttendanceDate_Fail_Exceiption;
+            }
+        }
+
+        public async Task<Tuple<ErrorCode, bool>> IsDuplicatePayment(Int64 accountId, string orderNumber, DateTime purchaseDate)
+        {
+            try
+            {
+                var result = await _queryFactory.Query("Payment")
+                    .Where(new { 
+                        AccountId = accountId,
+                        OrderNumber = orderNumber, 
+                        PurchaseDate = purchaseDate
+                    })
+                    .ExistsAsync();
+
+                return new Tuple<ErrorCode, bool>(ErrorCode.None, result);
+            }
+            catch
+            {
+                _logger.ZLogError($"[GameDb.IsDuplicatePayment] ErrorCode = {ErrorCode.IsDuplicatePayment_Fail_Exception}, AccountId = {accountId}");
+                return new Tuple<ErrorCode, bool>(ErrorCode.IsDuplicatePayment_Fail_Exception, false);
+            }
+        }
+
+        public async Task<ErrorCode> InsertPaymentData(Int64 accountId, string orderNumber, DateTime purchaseDate, Int32 productCode)
+        {
+            try
+            {
+                var result = await _queryFactory.Query("Payment")
+                    .InsertAsync(new
+                    {
+                        AccountId = accountId,
+                        OrderNumber = orderNumber,
+                        PurchaseDate = purchaseDate,
+                        ProductCode = productCode
+                    });
+
+                if(result != 1)
+                {
+                    _logger.ZLogError($"[GameDb.InsertPaymentData] ErrorCode = {ErrorCode.InsertPaymentData_Fail_Duplicate}, AccountId = {accountId}, OrderNumber = {orderNumber}");
+                    return ErrorCode.InsertPaymentData_Fail_Duplicate;
+                }
+
+                _logger.ZLogDebug($"[GameDb.InsertPaymentData] Complete, AccountId = {accountId}, OrderNumber = {orderNumber}");
+                return ErrorCode.None;
+            }
+            catch
+            {
+                _logger.ZLogError($"[GameDb.InsertPaymentData] ErrorCode = {ErrorCode.InsertPaymentData_Fail_Exception}, AccountId = {accountId}, OrderNumber = {orderNumber}");
+                return ErrorCode.InsertPaymentData_Fail_Exception;
             }
         }
 

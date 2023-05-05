@@ -99,6 +99,13 @@
         Attendance_Fail_Already_Check = 73,
 
         UpdateAttendanceDate_Fail_Exceiption = 74,
-        UpdateAttendanceData_Fail_Duplicate = 75
+        UpdateAttendanceData_Fail_Duplicate = 75,
+
+        Payment_Fail_Duplicate_Data = 76,
+
+        IsDuplicatePayment_Fail_Exception = 77,
+
+        InsertPaymentData_Fail_Exception = 78,
+        InsertPaymentData_Fail_Duplicate = 79
     }
 }

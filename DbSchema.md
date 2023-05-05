@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS GameDB. Mailbox
 (
     MailId BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '메일 번호',
     AccountId BIGINT NOT NULL COMMENT '계정 번호',
-    Title VARCHAR(40) NOT NULL COMMENT '메일 제목',
+    Title VARCHAR(50) NOT NULL COMMENT '메일 제목',
     ExpiryDate DATETIME NOT NULL COMMENT '만료 날짜',
     IsRead BOOL NOT NULL COMMENT '확인 여부',
     Comment VARCHAR(100) NOT NULL COMMENT '메일 내용'
@@ -93,14 +93,14 @@ CREATE TABLE IF NOT EXISTS GameDB. Attendance
 ) COMMENT '출석부 데이터';
 ```
 
-### PayInfo Table
+### Payment Table
 ```sql
-CREATE TABLE IF NOT EXISTS GameDB. PayInfo
+CREATE TABLE IF NOT EXISTS GameDB. Payment
 (
-    PaymentId BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '결제 번호',
     AccountId BIGINT NOT NULL COMMENT '계정 번호',
-    PaymentDate DATETIME NOT NULL COMMENT '결제 날짜',
-    SerialNum VARCHAR(50) NOT NULL COMMENT '일련 번호'
+    OrderNumber VARCHAR(20) NOT NULL COMMENT '결제 번호',
+    PurchaseDate DATETIME NOT NULL COMMENT '결제 날짜',
+    ProductCode INT NOT NULL COMMENT '구매 상품 번호'
 ) COMMENT '결제 정보';
 ```
 ## Masterdata

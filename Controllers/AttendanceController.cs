@@ -115,7 +115,7 @@ namespace TuesberryAPIServer.Controllers
         {
             MailboxData mailData = new MailboxData
             {
-                Title = "Today's Attendance Check Reward",
+                Title = "Daily Attendance Chack Reward havs Arrived.",
                 ExpiryDate = DateTime.Today.AddDays(100),
             };
 
@@ -131,7 +131,7 @@ namespace TuesberryAPIServer.Controllers
                 Magic = _masterDb.Items[itemCode].Magic
             });
 
-            string comment = $"{DateTime.Today}, Attendance Check Reward! Click And Get!";
+            string comment = $"{attendanceData.ContinuousPeriod}days Attendance Check. Would you like to receive your reward?";
 
             return new Tuple<MailboxData, string>(mailData, comment);
         }

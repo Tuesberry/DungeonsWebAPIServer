@@ -47,6 +47,13 @@ namespace TuesberryAPIServer.Services
         
         public Task<Tuple<ErrorCode, AttendanceData>> LoadAttendanceData(Int64 accountId);
 
-        public Task<ErrorCode> UpdateAttendanceData(Int64 accountId,  AttendanceData attendanceData);
+        public Task<ErrorCode> UpdateAttendanceData(Int64 accountId, AttendanceData attendanceData);
+
+        // --------- Payment --------- //
+
+        public Task<Tuple<ErrorCode, bool>> IsDuplicatePayment(Int64 accountId, string orderNumber, DateTime purchaseDate);
+
+        public Task<ErrorCode> InsertPaymentData(Int64 accountId, string orderNumber, DateTime purchaseDate, Int32 productCode);
+
     }
 }
