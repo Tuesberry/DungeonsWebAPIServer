@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System;
+using System.Text;
 using System.Text.Json;
 using TuesberryAPIServer.Services;
 using ZLogger;
@@ -38,7 +39,7 @@ namespace TuesberryAPIServer.Middleware
                 var bodyStr = await reader.ReadToEndAsync();
                 
                 // check body string
-                if(IsValueExist(context, bodyStr) == false)
+                if(await IsValueExist(context, bodyStr) == false)
                 {
                     return;
                 }
@@ -47,13 +48,14 @@ namespace TuesberryAPIServer.Middleware
                 var document = JsonDocument.Parse(bodyStr);
 
                 // check valid Json Format
-                if(IsInvalidJsonFormat(context, document, out appVersion, out masterDataVersion))
+                (var isInvalid, appVersion, masterDataVersion) = await IsInvalidJsonFormat(context, document);
+                if (isInvalid)
                 {
                     return;
                 }
 
                 // check version
-                if(IsInvalidVersion(context, appVersion, masterDataVersion))
+                if(await IsInvalidVersion(context, appVersion, masterDataVersion))
                 {
                     return;
                 }
@@ -69,7 +71,7 @@ namespace TuesberryAPIServer.Middleware
             await _next(context);
         }
 
-        void WriteErrorOnContext(HttpContext context, ErrorCode error)
+        async Task WriteErrorOnContext(HttpContext context, ErrorCode error)
         {
             // return error
             // using serialize, c# class -> json
@@ -80,60 +82,57 @@ namespace TuesberryAPIServer.Middleware
             // encode
             var bytes = Encoding.UTF8.GetBytes(errorJsonResponse);
             // write on the body
-            context.Response.Body.Write(bytes, 0, bytes.Length);
+            await context.Response.Body.WriteAsync(bytes, 0, bytes.Length);
 
             // log
             _logger.ZLogError($"[CheckUserVersion] ErrorCode: {error}");
         }
         
-        bool IsInvalidVersion(HttpContext context, string appVersion, string masterDataVersion)
+        async Task<bool> IsInvalidVersion(HttpContext context, string appVersion, string masterDataVersion)
         {
             if((appVersion != _masterDb.AppVersion)&&(masterDataVersion != _masterDb.MasterDataVersion))
             {
-                WriteErrorOnContext(context, ErrorCode.Invalid_AppVersion_And_MasterDataVersion);
+                await WriteErrorOnContext(context, ErrorCode.Invalid_AppVersion_And_MasterDataVersion);
                 return true;
             }
             if(appVersion != _masterDb.AppVersion)
             {
-                WriteErrorOnContext(context, ErrorCode.Invalid_AppVersion);
+                 await WriteErrorOnContext(context, ErrorCode.Invalid_AppVersion);
                 return true;
             }
             if(masterDataVersion != _masterDb.MasterDataVersion)
             {
-                WriteErrorOnContext(context, ErrorCode.Invalid_MasterDataVersion);
+                await WriteErrorOnContext(context, ErrorCode.Invalid_MasterDataVersion);
                 return true;
             }
 
             return false;
         }
 
-        bool IsValueExist(HttpContext context, string bodyStr)
+        async Task<bool> IsValueExist(HttpContext context, string bodyStr)
         {
             if(string.IsNullOrEmpty(bodyStr) == false) 
             {
                 return true;
             }
 
-            WriteErrorOnContext(context, ErrorCode.Invalid_Request_Http_Body);
+            await WriteErrorOnContext(context, ErrorCode.Invalid_Request_Http_Body);
             return false;
         }
 
-        bool IsInvalidJsonFormat(HttpContext context, JsonDocument document, out string appVersion, out string masterDataVersion)
+        async Task<Tuple<bool, string, string>> IsInvalidJsonFormat(HttpContext context, JsonDocument document)
         {
             try
             {
-                appVersion = document.RootElement.GetProperty("AppVersion").GetString() ?? string.Empty;
-                masterDataVersion = document.RootElement.GetProperty("MasterDataVersion").GetString() ?? string.Empty;
-                return false;
+                string appVersion = document.RootElement.GetProperty("AppVersion").GetString() ?? string.Empty;
+                string masterDataVersion = document.RootElement.GetProperty("MasterDataVersion").GetString() ?? string.Empty;
+                
+                return new Tuple<bool, string, string>(false, appVersion, masterDataVersion);
             }
             catch
             {
-                appVersion = "";
-                masterDataVersion = "";
-
-                WriteErrorOnContext(context, ErrorCode.Invalid_Version_Fail_Wrong_Keyword);
-
-                return true;
+                await WriteErrorOnContext(context, ErrorCode.Invalid_Version_Fail_Wrong_Keyword);
+                return new Tuple<bool, string, string>(true, string.Empty, string.Empty);
             }
         }
     }

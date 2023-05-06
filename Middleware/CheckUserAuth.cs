@@ -131,7 +131,7 @@ namespace TuesberryAPIServer.Middleware
             catch
             {
                 await WriteErrorOnContext(context, ErrorCode.AuthToken_Fail_Wrong_keyword);
-                return new Tuple<bool, string, string>(false, string.Empty, string.Empty);
+                return new Tuple<bool, string, string>(true, string.Empty, string.Empty);
             }
         }
 
