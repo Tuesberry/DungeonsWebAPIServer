@@ -126,6 +126,7 @@ namespace TuesberryAPIServer.Middleware
             {
                 string userId = document.RootElement.GetProperty("Id").GetString() ?? string.Empty;
                 string authToken = document.RootElement.GetProperty("AuthToken").GetString() ?? string.Empty;
+                
                 return new Tuple<bool, string, string>(false, userId, authToken);
             }
             catch
