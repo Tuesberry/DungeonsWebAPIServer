@@ -115,5 +115,16 @@
 
         DeleteItemData_Fail_Exception = 83,
         DeleteItemData_Fail_Invalid_Data = 84,
+
+        InsertItems_Fail_Exception = 85,
+
+        DeleteItemDatum_Fail_Exception = 86,
+        DeleteItemDatum_Fail_Not_Complete = 87,
+
+        UpdateItemAmount_Fail_Exception = 88,
+        UpdateItemAmount_Fail_Not_Exist = 89,
+        UpdateItemAmount_Fail_Duplicate_Update = 90,
+
+        DeleteOrUpdateItem_Fail_Exception = 91,
     }
 }

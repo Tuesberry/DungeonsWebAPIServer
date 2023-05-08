@@ -74,7 +74,7 @@ namespace TuesberryAPIServer.Controllers
                 itemData.EnchanceCount ++;
 
                 // 업데이트
-                errorCode = await _gameDb.UpdateItemData(userInfo.AccountId, itemData);
+                errorCode = await _gameDb.UpdateItem(userInfo.AccountId, itemData);
                 if(errorCode != ErrorCode.None)
                 {
                     _logger.ZLogError($"[Enchance] Update Enchance Success Item Data Fail, AccountId = {userInfo.AccountId}, UserItemId = {request.UserItemId}");
@@ -85,7 +85,7 @@ namespace TuesberryAPIServer.Controllers
             else
             {
                 // 강화 실패 => 아이템 삭제
-                errorCode = await _gameDb.DeleteItemData(userInfo.AccountId, request.UserItemId);
+                errorCode = await _gameDb.DeleteItem(userInfo.AccountId, request.UserItemId);
                 if (errorCode != ErrorCode.None)
                 {
                     _logger.ZLogError($"[Enchance] Delete Item Fail, AccountId = {userInfo.AccountId}, UserItemId = {request.UserItemId}");

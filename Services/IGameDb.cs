@@ -22,11 +22,21 @@ namespace TuesberryAPIServer.Services
 
         public Task<ErrorCode> InsertItem(Int64 accountId, ItemData itemData);
 
+        public Task<ErrorCode> InsertItem(Int64 accountId, List<ItemData> itemDataList);
+
         public Task<ErrorCode> InsertOrUpdateItem(Int64 accountId, ItemData itemData);
 
-        public Task<ErrorCode> UpdateItemData(Int64 accountId, ItemData itemData);
+        public Task<ErrorCode> InsertOrUpdateItem(Int64 accountId, List<ItemData> itemDataList);
 
-        public Task<ErrorCode> DeleteItemData(Int64 accountId, Int32 userItemId);
+        public Task<ErrorCode> UpdateItem(Int64 accountId, ItemData itemData);
+
+        public Task<ErrorCode> UpdateItemAmount(Int64 accountId, ItemData itemData);
+
+        public Task<ErrorCode> DeleteOrUpdateItem(Int64 accountId, List<ItemData> itemDataList);
+
+        public Task<ErrorCode> DeleteItem(Int64 accountId, Int32 userItemId);
+
+        public Task<ErrorCode> DeleteItem(Int64 accountId, List<Int32> userItemIdList);
 
         // --------- Mailbox --------- //
 

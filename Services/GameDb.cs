@@ -257,6 +257,47 @@ namespace TuesberryAPIServer.Services
             }
         }
 
+        public async Task<ErrorCode> InsertItem(Int64 accountId, List<ItemData> itemDataList)
+        {
+            try
+            {
+                var cols = new[] { "AccountId", "ItemCode", "Amount", "EnchanceCount", "Attack", "Defence", "Magic" };
+                object[][] data = new object[itemDataList.Count()][];
+
+                for (int i = 0; i < itemDataList.Count(); i++)
+                {
+                    data[i] = new object[]
+                    {
+                        accountId,
+                        itemDataList[i].ItemCode,
+                        itemDataList[i].Amount,
+                        itemDataList[i].EnchanceCount,
+                        itemDataList[i].Attack,
+                        itemDataList[i].Defence,
+                        itemDataList[i].Magic
+                    };
+                }
+
+                // insert
+                var result = await _queryFactory.Query("ItemData")
+                    .InsertAsync(cols, data);
+
+                if(result != itemDataList.Count())
+                {
+                    _logger.ZLogError($"[InsertItems] ErrorCode = {ErrorCode.InsertItems_Fail_Exception}, AccountId = {accountId}, Count = {itemDataList.Count()}");
+                    return ErrorCode.InsertItems_Fail_Exception;
+                }
+
+                _logger.ZLogDebug($"[InsertItems] Complete, AccountId = {accountId}, Count = {itemDataList.Count()}");
+                return ErrorCode.None;
+            }
+            catch
+            {
+                _logger.ZLogError($"[InsertItems] ErrorCode = {ErrorCode.InsertItems_Fail_Exception}, AccountId = {accountId}, Count = {itemDataList.Count()}");
+                return ErrorCode.InsertItems_Fail_Exception;
+            }
+        }
+
         public async Task<ErrorCode> InsertOrUpdateItem(Int64 accountId, ItemData itemData)
         {
             try
@@ -280,41 +321,24 @@ namespace TuesberryAPIServer.Services
                     // 겹쳐질 수 있고, 해당 아이템이 이미 존재 => update
                     // 겹쳐질 수 있는데, 해당 아이템이 없음 => Insert
 
-                    // 이미 있는지 확인
-                    var checkData = await _queryFactory.Query("ItemData")
-                        .Select("UserItemId", "Amount")
-                        .Where(
-                            new { 
-                                AccountID = accountId, 
-                                ItemCode = itemCode, 
-                                EnchanceCount = itemData.EnchanceCount,
-                                Attack = itemData.Attack,
-                                Defence = itemData.Defence,
-                                Magic = itemData.Magic
-                            })
-                        .FirstOrDefaultAsync<ItemData>();
+                    var result = await UpdateItemAmount(accountId, itemData);
 
-                    // 해당 데이터가 존재하는지 확인
-                    if (checkData is null)
+                    if(result == ErrorCode.UpdateItemAmount_Fail_Not_Exist)
                     {
-                        var result = await InsertItem(accountId, itemData);
+                        // 같은 아이템이 존재하지 않았음 => Insert
+                        result = await InsertItem(accountId, itemData);
                         if (result != ErrorCode.None)
                         {
-                            _logger.ZLogError($"[GameDb.InsertOrUpdateItem] InsertItem Error, AccountId = {accountId}");
+                            _logger.ZLogError($"[GameDb.InsertOrUpdateItem] Insert Item Error, AccountId = {accountId}");
                         }
-                        return result;
                     }
-
-                    // Update Data
-                    var count = await _queryFactory.Query("ItemData")
-                        .Where(new { UserItemId = checkData.UserItemId })
-                        .UpdateAsync(new { Amount = checkData.Amount + itemData.Amount });
-
-                    if (count != 1)
+                    else if(result != ErrorCode.None)
                     {
-                        _logger.ZLogError($"[GameDb.InsertOrUpdateItem] ErrorCode = {ErrorCode.InsertOrUpdate_Item_Data_Fail_Exception}, AccountId = {accountId}");
-                        return ErrorCode.InsertOrUpdate_Item_Data_Fail_Exception;
+                        // update error
+                        _logger.ZLogError($"[GameDb.InsertOrUpdateItem] Check And Update Item Error, AccountId = {accountId}");
                     }
+
+                    return result;
                 }
                 else
                 {
@@ -324,8 +348,8 @@ namespace TuesberryAPIServer.Services
                     {
                         _logger.ZLogError($"[GameDb.InsertOrUpdateItem] InsertItem Error, AccountId = {accountId}");
                     }
+                    return result;
                 }
-                return ErrorCode.None;
             }
             catch
             {
@@ -334,7 +358,84 @@ namespace TuesberryAPIServer.Services
             }
         }
 
-        public async Task<ErrorCode> UpdateItemData(Int64 accountId, ItemData itemData)
+        public async Task<ErrorCode> InsertOrUpdateItem(Int64 accountId, List<ItemData> itemDataList)
+        {
+            List<ItemData> completeList = new List<ItemData>();
+            List<ItemData> insertItemList = new List<ItemData>();
+            ErrorCode errorCode = ErrorCode.None;
+
+            try
+            {   
+                foreach (ItemData item in itemDataList) 
+                {
+                    // 아이템 코드가 돈 => GameData에서 업데이트
+                    if (_masterDb.Items[item.ItemCode].Attribute == _masterDb.ItemAttributes["Money"])
+                    {
+                        errorCode = await UpdateMoney(accountId, item.Amount);
+                        if (errorCode != ErrorCode.None)
+                        {
+                            _logger.ZLogError($"[GameDb.InsertOrUpdateItems] Update Money Error, AccountId = {accountId}");
+                            throw new Exception();
+                        }
+                        completeList.Add(item);
+                    }
+
+                    // 겹침 가능 여부 확인
+                    if (_masterDb.Items[item.ItemCode].IsOverlapped)
+                    {
+                        // 겹쳐질 수 있고, 해당 아이템이 이미 존재 => update
+                        // 겹쳐질 수 있는데, 해당 아이템이 없음 => Insert
+                        errorCode = await UpdateItemAmount(accountId, item);
+                        if (errorCode == ErrorCode.UpdateItemAmount_Fail_Not_Exist)
+                        {
+                            // 같은 아이템이 존재하지 않았음 => Insert
+                            insertItemList.Add(item);
+                        }
+                        else if (errorCode == ErrorCode.None)
+                        {
+                            // update complete
+                            completeList.Add(item);
+                        }
+                        else
+                        {
+                            // update error
+                            _logger.ZLogError($"[GameDb.InsertOrUpdateItem] Check And Update Item Error, AccountId = {accountId}");
+                            throw new Exception();
+                        }
+                    }
+                    else
+                    {
+                        // 겹쳐질 수 없음 => insert
+                        insertItemList.Add(item);
+                    }
+                }
+
+                // Insert 해야 하는 아이템들, 한번에 insert
+                errorCode = await InsertItem(accountId, insertItemList);
+                if(errorCode != ErrorCode.None)
+                {
+                    _logger.ZLogError($"[GameDb.InsertOrUpdateItem] ErrorCode : {ErrorCode.InsertOrUpdate_Item_Data_Fail_Exception}, AccountId: {accountId}");
+                    throw new Exception();
+                }
+
+                return ErrorCode.None;
+            }
+            catch
+            {
+                _logger.ZLogError($"[GameDb.InsertOrUpdateItem] ErrorCode : {ErrorCode.InsertOrUpdate_Item_Data_Fail_Exception}, AccountId: {accountId}");
+                
+                // 이미 넣은 아이템들에 대해서 롤백
+                errorCode =  await DeleteOrUpdateItem(accountId, completeList);
+                if(errorCode != ErrorCode.None)
+                {
+                    _logger.ZLogError($"[GameDb.InsertOrUpdateItem] Rollback Fail, AccountId = {accountId}");
+                }
+                
+                return ErrorCode.InsertOrUpdate_Item_Data_Fail_Exception;
+            }
+        }
+
+        public async Task<ErrorCode> UpdateItem(Int64 accountId, ItemData itemData)
         {
             try
             {
@@ -365,7 +466,128 @@ namespace TuesberryAPIServer.Services
             }
         }
 
-        public async Task<ErrorCode> DeleteItemData(Int64 accountId, Int32 userItemId)
+        public async Task<ErrorCode> UpdateItemAmount(Int64 accountId, ItemData itemData)
+        {
+            try
+            {
+                // 이미 있는지 확인
+                var checkData = await _queryFactory.Query("ItemData")
+                    .Select("UserItemId", "Amount")
+                    .Where(
+                        new
+                        {
+                            AccountID = accountId,
+                            ItemCode = itemData.ItemCode,
+                            EnchanceCount = itemData.EnchanceCount,
+                            Attack = itemData.Attack,
+                            Defence = itemData.Defence,
+                            Magic = itemData.Magic
+                        })
+                    .FirstOrDefaultAsync<ItemData>();
+
+                // 해당 데이터가 존재하는지 확인
+                if (checkData is null)
+                {
+                    _logger.ZLogError($"[GameDb.UpdateItemAmount] ErrorCode = {ErrorCode.UpdateItemAmount_Fail_Not_Exist}, AccountId = {accountId}");
+                    return ErrorCode.UpdateItemAmount_Fail_Not_Exist;
+                }
+
+                // Update Data
+                var count = await _queryFactory.Query("ItemData")
+                    .Where(new { UserItemId = checkData.UserItemId })
+                    .UpdateAsync(new { Amount = checkData.Amount + itemData.Amount });
+
+                if (count != 1)
+                {
+                    _logger.ZLogError($"[GameDb.UpdateItemAmount] ErrorCode = {ErrorCode.UpdateItemAmount_Fail_Duplicate_Update}, AccountId = {accountId}");
+                    return ErrorCode.UpdateItemAmount_Fail_Duplicate_Update;
+                }
+
+                _logger.ZLogDebug($"[GameDb.UpdateItemAmount] Complete, AccountId = {accountId}");
+                return ErrorCode.None;
+            }
+            catch
+            {
+                _logger.ZLogError($"[GameDb.UpdateItemAmount] ErrorCode = {ErrorCode.UpdateItemAmount_Fail_Exception}, AccountId = {accountId}");
+                return ErrorCode.UpdateItemAmount_Fail_Exception;
+            }
+        }
+
+        public async Task<ErrorCode> DeleteOrUpdateItem(Int64 accountId, List<ItemData> itemDataList)
+        {
+            List<ItemData> completeList = new List<ItemData>();
+            List<Int32> deleteItemList = new List<Int32>();
+            ErrorCode errorCode = ErrorCode.None;
+
+            try
+            {
+                foreach (ItemData item in itemDataList)
+                {
+                    // 아이템 코드가 돈 => GameData에서 업데이트
+                    if (_masterDb.Items[item.ItemCode].Attribute == _masterDb.ItemAttributes["Money"])
+                    {
+                        errorCode = await UpdateMoney(accountId, -item.Amount);
+                        if (errorCode != ErrorCode.None)
+                        {
+                            _logger.ZLogError($"[GameDb.DeleteOrUpdateItem] Update Money Error, AccountId = {accountId}, Money = {-item.Amount}");
+                            throw new Exception();
+                        }
+                        completeList.Add(item);
+                    }
+
+                    // 겹침 가능 여부 확인
+                    if (_masterDb.Items[item.ItemCode].IsOverlapped)
+                    {
+                        // 겹쳐질 수 있고, 해당 아이템이 이미 존재 => update
+                        // 겹쳐질 수 있는데, 해당 아이템이 없음 => Insert
+                        
+                        // amount값 마이너스로
+                        item.Amount = -item.Amount;
+
+                        // update
+                        errorCode = await UpdateItemAmount(accountId, item);
+                        if (errorCode == ErrorCode.UpdateItemAmount_Fail_Not_Exist)
+                        {
+                            // 같은 아이템이 존재하지 않았음 => Insert
+                            deleteItemList.Add(item.UserItemId);
+                        }
+                        else if (errorCode == ErrorCode.None)
+                        {
+                            // update complete
+                            completeList.Add(item);
+                        }
+                        else
+                        {
+                            // update error
+                            _logger.ZLogError($"[GameDb.DeleteOrUpdateItem] Check And Update Item Error, AccountId = {accountId}");
+                            throw new Exception();
+                        }
+                    }
+                    else
+                    {
+                        // 겹쳐질 수 없음 => insert
+                        deleteItemList.Add(item.UserItemId);
+                    }
+                }
+
+                // Insert 해야 하는 아이템들, 한번에 insert
+                errorCode = await DeleteItem(accountId, deleteItemList);
+                if (errorCode != ErrorCode.None)
+                {
+                    _logger.ZLogError($"[GameDb.DeleteOrUpdateItemzlq] ErrorCode : {ErrorCode.DeleteOrUpdateItem_Fail_Exception}, AccountId: {accountId}");
+                    throw new Exception();
+                }
+
+                return ErrorCode.None;
+            }
+            catch
+            {
+                _logger.ZLogError($"[GameDb.DeleteOrUpdateItemzlq] ErrorCode : {ErrorCode.DeleteOrUpdateItem_Fail_Exception}, AccountId: {accountId}");
+                return ErrorCode.DeleteOrUpdateItem_Fail_Exception;
+            }
+        }
+
+        public async Task<ErrorCode> DeleteItem(Int64 accountId, Int32 userItemId)
         {
             try
             {
@@ -386,6 +608,30 @@ namespace TuesberryAPIServer.Services
             {
                 _logger.ZLogError($"[GameDb.DeleteItemData] ErrorCode = {ErrorCode.DeleteItemData_Fail_Exception}, AccountId = {accountId}, UserItemId = {userItemId}");
                 return ErrorCode.DeleteItemData_Fail_Exception;
+            }
+        }
+
+        public async Task<ErrorCode> DeleteItem(Int64 accountId, List<Int32> userItemIdList)
+        {
+            try
+            {
+                var result = await _queryFactory.Query("ItemData")
+                    .WhereIn("UserItemId", userItemIdList)
+                    .DeleteAsync();
+
+                if(result != userItemIdList.Count())
+                {
+                    _logger.ZLogError($"[GameDb.DeleteItemDatum] ErrorCode = {ErrorCode.DeleteItemDatum_Fail_Not_Complete}, AccountId = {accountId}, UserItemId = {userItemIdList.ToString()}");
+                    return ErrorCode.DeleteItemDatum_Fail_Not_Complete;
+                }
+
+                _logger.ZLogError($"[GameDb.DeleteItemDatum] Complete, AccountId = {accountId}, UserItemId = {userItemIdList.ToString()}");
+                return ErrorCode.None;
+            }
+            catch
+            {
+                _logger.ZLogError($"[GameDb.DeleteItemDatum] ErrorCode = {ErrorCode.DeleteItemDatum_Fail_Exception}, AccountId = {accountId}, UserItemId = {userItemIdList.ToString()}");
+                return ErrorCode.DeleteItemDatum_Fail_Exception;
             }
         }
 
@@ -560,7 +806,7 @@ namespace TuesberryAPIServer.Services
                         return ErrorCode.ReceiveMailItem_Fail_Add_Item_Exception;
                     }
                 }
-
+                
                 // set mail read
                 errorCode = await SetMailRead(accountId, mailId);
                 if(errorCode != ErrorCode.None)
@@ -638,7 +884,6 @@ namespace TuesberryAPIServer.Services
                 return ErrorCode.DeleteMail_Fail_Exception;
             }
         }
-
 
         public async Task<bool> IsValidMailId(Int64 accountId, Int32 mailId)
         {
