@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using TuesberryAPIServer.ModelDb;
 
 namespace TuesberryAPIServer.ModelReqRes
 {
@@ -25,5 +26,6 @@ namespace TuesberryAPIServer.ModelReqRes
     {
         public ErrorCode Result { get; set; } = ErrorCode.None;
         public bool IsSuccess { get; set; } = false;
+        public ItemData? EnchanceItemData { get; set; }
     }
 }

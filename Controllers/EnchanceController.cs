@@ -97,6 +97,12 @@ namespace TuesberryAPIServer.Controllers
             _logger.ZLogDebug($"[Enchance] Complete, AccountId = {userInfo.AccountId}, Result = {success}, UserItemId = {request.UserItemId}");
 
             response.IsSuccess = success;
+
+            if (success)
+            {
+                response.EnchanceItemData = itemData;
+            }
+          
             return response;
         }
 

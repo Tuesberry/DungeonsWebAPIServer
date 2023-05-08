@@ -22,6 +22,6 @@ namespace TuesberryAPIServer.ModelReqRes
     {
         public ErrorCode Result { get; set; } = ErrorCode.None;
 
-        public Int32 ContinuousPeriod = 0;
+        public Int32 ContinuousPeriod { get; set; } = 0;
     }
 }
