@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS GameDB. Mailbox
     Title VARCHAR(50) NOT NULL COMMENT '메일 제목',
     ExpiryDate DATETIME NOT NULL COMMENT '만료 날짜',
     IsRead BOOL NOT NULL COMMENT '확인 여부',
+    IsReceived BOOL NOT NULL COMMENT '아이템 획득 여부',
     Comment VARCHAR(100) NOT NULL COMMENT '메일 내용'
 ) COMMENT '우편함 데이터';
 ```
@@ -74,10 +75,6 @@ CREATE TABLE IF NOT EXISTS GameDB. MailboxItem
     MailId BIGINT NOT NULL COMMENT '메일 번호',
     ItemCode INT NOT NULL COMMENT '아이템 코드',
     Amount INT NOT NULL COMMENT '아이템 수량',
-    EnchanceCount INT NOT NULL DEFAULT(0) COMMENT '강화 횟수',
-    Attack INT NOT NULL COMMENT '공격력',
-    Defence INT NOT NULL COMMENT '방어력',
-    Magic INT NOT NULL COMMENT '마법력',
     FOREIGN KEY(MailId) REFERENCES Mailbox(MailId) ON DELETE Cascade
 ) COMMENT '우편함 아이템 데이터';
 ```
@@ -170,4 +167,22 @@ CREATE TABLE IF NOT EXISTS GameDB. StageNpcMasterData
     Count INT NOT NULL COMMENT '개수',
     Exp INT NOT NULL COMMENT '1개당 보상경험치'
 ) COMMENT '스테이지 NPC 마스터 데이터';
+```
+
+### LevelUpExpMasterData Table
+```sql
+CREATE TABLE IF NOT EXISTS GameDB. LevelUpExpMasterData
+(
+    Level INT NOT NULL COMMENT '레벨',
+    Exp INT NOT NULL COMMENT '필요 경험치'
+) COMMENT 'LevelUpExp 마스터 데이터';
+```
+
+### DefaultItemMasterData Table
+```sql
+CREATE TABLE IF NOT EXISTS GameDB. DefaultItemMasterData
+(
+    ItemCode INT NOT NULL COMMENT '아이템 코드',
+    Amount INT NOT NULL COMMENT '아이템 수량'
+) COMMENT '기본 아이템 마스터 데이터';
 ```

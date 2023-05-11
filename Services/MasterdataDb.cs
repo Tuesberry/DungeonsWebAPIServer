@@ -79,17 +79,32 @@ namespace TuesberryAPIServer.Services
                     }
                 }
                 // npc data
-                var npcData = _queryFactory.Query("StageNpcMasterData").Get<NpcMasterData>();
+                var npcData = _queryFactory.Query("StageNpcMasterData").Get<NpcMasterDataDb>();
                 foreach (var npc in npcData)
                 {
-                    if (Npc.ContainsKey(npc.Code))
+                    if (StageNpc.ContainsKey(npc.Code))
                     {
-                        Npc[npc.Code].Add(npc);
+                        StageNpc[npc.Code].Add(new NpcMasterData {
+                            NpcCode = npc.NpcCode,
+                            Count = npc.Count,
+                            Exp = npc.Exp
+                        });
                     }
                     else
                     {
-                        Npc.Add(npc.Code, new List<NpcMasterData>(new NpcMasterData[] {npc}));  
+                        StageNpc.Add(npc.Code, new List<NpcMasterData>(new NpcMasterData[] {
+                            new NpcMasterData {
+                                NpcCode = npc.NpcCode,
+                                Count = npc.Count,
+                                Exp = npc.Exp
+                        }}));  
                     }
+                }
+                // level up exp
+                var levelUpExpData = _queryFactory.Query("LevelUpExpMasterData").Get<LevelUpExpData>();
+                foreach(var levelUpExp in levelUpExpData)
+                {
+                    LevelUpExp.Add(levelUpExp.Level, levelUpExp.Exp);
                 }
 
                 _logger.ZLogDebug($"[MasterdataDb.Init] Init Master Data Complete");
@@ -102,24 +117,27 @@ namespace TuesberryAPIServer.Services
             }
         }
 
-        public string MasterDataVersion { get; set; } = "1.0";
+        public string MasterDataVersion { get; } = "1.0";
 
-        public string AppVersion { get; set; } = "1.0";
+        public string AppVersion { get; } = "1.0";
 
-        public string MailboxTitle { get; set; } = "우편함";
+        public string MailboxTitle { get; } = "우편함";
 
-        public string MailboxComment { get; set; } = "선물은 7일 동안 보관됩니다";
+        public string MailboxComment { get; } = "선물은 7일 동안 보관됩니다";
 
-        public Dictionary<Int32, ItemMasterData> Items { get; set; } = new Dictionary<Int32, ItemMasterData>();
+        public Dictionary<Int32, ItemMasterData> Items { get; } = new Dictionary<Int32, ItemMasterData>();
 
-        public Dictionary<string, Int32> ItemAttributes { get; set; } = new Dictionary<string, Int32>();
+        public Dictionary<string, Int32> ItemAttributes { get; } = new Dictionary<string, Int32>();
 
-        public Dictionary<Int32, AttendanceMasterData> AttendanceRewards { get; set; } = new Dictionary<Int32, AttendanceMasterData>();
+        public Dictionary<Int32, AttendanceMasterData> AttendanceRewards { get; } = new Dictionary<Int32, AttendanceMasterData>();
 
-        public Dictionary<Int32, List<ProductMasterData>> BundleProducts { get; set; } = new Dictionary<Int32, List<ProductMasterData>>();
+        public Dictionary<Int32, List<ProductMasterData>> BundleProducts { get; } = new Dictionary<Int32, List<ProductMasterData>>();
 
-        public Dictionary<Int32, List<Int32>> StageItems { get; set; } = new Dictionary<Int32, List<Int32>>();
+        public Dictionary<Int32, List<Int32>> StageItems { get; } = new Dictionary<Int32, List<Int32>>();
 
-        public Dictionary<Int32, List<NpcMasterData>> Npc { get; set; } = new Dictionary<Int32, List<NpcMasterData>>();
+        public Dictionary<Int32, List<NpcMasterData>> StageNpc { get; } = new Dictionary<Int32, List<NpcMasterData>>();
+
+        public Dictionary<Int32, Int32> LevelUpExp { get; } = new Dictionary<Int32, Int32>();
+
     }
 }

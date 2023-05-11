@@ -2,7 +2,7 @@
 
 namespace TuesberryAPIServer.ModelReqRes
 {
-    public class PKAttendanceRequest
+    public class PkLoadStageRequest
     {
         [Required(ErrorMessage = "Required")]
         [StringLength(15, MinimumLength = 4, ErrorMessage = "Id length is not appropriate")]
@@ -18,10 +18,10 @@ namespace TuesberryAPIServer.ModelReqRes
         public string MasterDataVersion { get; set; } = string.Empty;
     }
 
-    public class PKAttendanceResponse
+    public class PkLoadStageResponse
     {
         public ErrorCode Result { get; set; } = ErrorCode.None;
 
-        public Int32 ContinuousPeriod { get; set; } = 0;
+        public Int32 FinalCompletedStageNum { get; set; } = 0;
     }
 }

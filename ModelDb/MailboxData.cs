@@ -5,13 +5,10 @@
         public Int32 MailId { get; set; } = 0;
         public string Title { get; set; } = string.Empty;
         public bool IsRead { get; set; } = false;
+        public bool IsReceived { get; set; } = false;
         public DateTime ExpiryDate { get; set; } = DateTime.MinValue;
         public Int32 ItemCode { get; set; } = 0;
         public Int32 Amount { get; set; } = 0;
-        public Int32 EnchanceCount { get; set; } = 0;
-        public Int32 Attack { get; set; } = 0;
-        public Int32 Defence { get; set; } = 0;
-        public Int32 Magic { get; set; } = 0;
     }
 
     public class MailboxData
@@ -19,6 +16,7 @@
         public Int32 MailId { get; set; } = 0;
         public string Title { get; set; } = string.Empty;
         public bool IsRead { get; set; } = false;
+        public bool IsReceived { get; set; } = false;
         public DateTime ExpiryDate { get; set; } = DateTime.MinValue;
         public List<MailboxItemData> MailboxItemData { get; set; } = new List<MailboxItemData>();
     }
@@ -27,9 +25,5 @@
     {
         public Int32 ItemCode { get; set; } = 0;
         public Int32 Amount { get; set; } = 0;
-        public Int32 EnchanceCount { get; set; } = 0;
-        public decimal Attack { get; set; } = 0;
-        public decimal Defence { get; set; } = 0;
-        public decimal Magic { get; set; } = 0;
     }
 }

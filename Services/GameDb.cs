@@ -4,6 +4,7 @@ using SqlKata.Compilers;
 using SqlKata.Execution;
 using System.Data;
 using System.Reflection.PortableExecutable;
+using System.Threading;
 using TuesberryAPIServer.ModelDb;
 using ZLogger;
 using static Humanizer.In;
@@ -131,11 +132,85 @@ namespace TuesberryAPIServer.Services
             }
         }
 
+        public async Task<Tuple<ErrorCode, Int32, Int32>> LoadLevelAndExp(Int64 accountId)
+        {
+            try
+            {
+                var gameData = await _queryFactory.Query("GameData")
+                    .Select("Level", "Exp")
+                    .Where("AccountId", accountId).FirstOrDefaultAsync<GameData>();
+
+                if(gameData is null)
+                {
+                    _logger.ZLogError($"[GameDb.LoadLevelAndExp] ErrorCode = {ErrorCode.LoadLevelAndExp_Fail_Not_Exist}, AccountId = {accountId}");
+                    return new Tuple<ErrorCode, Int32, Int32>(ErrorCode.LoadLevelAndExp_Fail_Not_Exist, 0, 0);
+                }
+
+                _logger.ZLogDebug($"[GameDb.LoadLevelAndExp] Load Data Complete, AccountId = {accountId}");
+                return new Tuple<ErrorCode, Int32, Int32>(ErrorCode.None, gameData.Level, gameData.Exp);
+            }
+            catch
+            {
+                _logger.ZLogError($"[GameDb.LoadLevelAndExp] ErrorCode = {ErrorCode.LoadLevelAndExp_Fail_Exception}, AccountId = {accountId}");
+                return new Tuple<ErrorCode, Int32, Int32>(ErrorCode.LoadLevelAndExp_Fail_Exception, 0, 0);
+            }
+        }
+
+        public async Task<ErrorCode> UpdateLevelAndExp(Int64 accountId, Int32 level, Int32 exp)
+        {
+            try
+            {
+                var result = await _queryFactory.Query("GameData")
+                    .Where("AccountId", accountId)
+                    .UpdateAsync(new { Level = level, Exp = exp });
+
+                if(result != 1)
+                {
+                    _logger.ZLogError($"[GameDb.UpdateLevelAndExp] ErrorCode = {ErrorCode.UpdateLevelAndExp_Fail_AccountId_Not_Exist}, AccountId = {accountId}, Level = {level}, Exp = {exp}");
+                    return ErrorCode.UpdateLevelAndExp_Fail_AccountId_Not_Exist;
+                }
+
+                _logger.ZLogDebug($"[GameDb.UpdateLevelAndExp] Complete, AccountId = {accountId}, Level = {level}, Exp = {exp}");
+                return ErrorCode.None;
+            }
+            catch
+            {
+                _logger.ZLogError($"[GameDb.UpdateLevelAndExp] ErrorCode = {ErrorCode.UpdateLevelAndExp_Fail_Exception}, AccountId = {accountId}, Level = {level}, Exp = {exp}");
+                return ErrorCode.UpdateLevelAndExp_Fail_Exception;
+            }
+        }
+
+        public async Task<Tuple<ErrorCode, Int32>> LoadFinalCompletedStageNum(Int64 accountId)
+        {
+            try
+            {
+                var stageNum = await _queryFactory.Query("GameData")
+                    .Select("Stage")
+                    .Where("AccountId", accountId)
+                    .FirstAsync<Int32>();
+
+                _logger.ZLogDebug($"[GameDb.LoadFinalCompletedStageNum] Complete, AccountId = {accountId}");
+                return new Tuple<ErrorCode, Int32>(ErrorCode.None, stageNum);
+            }
+            catch
+            {
+                _logger.ZLogError($"[GameDb.LoadFinalCompletedStageNum] ErrorCode = {ErrorCode.LoadFinalCompletedStageNum_Fail_Exception}, AccountId = {accountId}");
+                return new Tuple<ErrorCode, Int32>(ErrorCode.LoadFinalCompletedStageNum_Fail_Exception, 0);
+            }
+        }
+
         public async Task<ErrorCode> DeleteGameData(string userId)
         {
             try
             {
                 var result = await _queryFactory.Query("GameData").Where("UserId", userId).DeleteAsync();
+                
+                if(result != 1)
+                {
+                    _logger.ZLogError($"[GameDb.DeleteGameData] ErrorCode = {ErrorCode.DeleteGameData_Fail_Exception}, UserId = {userId}");
+                    return ErrorCode.DeleteGameData_Fail_Exception;
+                }
+
                 _logger.ZLogDebug($"[GameDb.DeleteGameData] Delete Game Data Complete, UserId = {userId}");
                 return ErrorCode.None;
             }
@@ -362,6 +437,7 @@ namespace TuesberryAPIServer.Services
         {
             List<ItemData> completeList = new List<ItemData>();
             List<ItemData> insertItemList = new List<ItemData>();
+
             ErrorCode errorCode = ErrorCode.None;
 
             try
@@ -492,6 +568,13 @@ namespace TuesberryAPIServer.Services
                     return ErrorCode.UpdateItemAmount_Fail_Not_Exist;
                 }
 
+                // amount valid check
+                if(checkData.Amount + itemData.Amount < 0)
+                {
+                    _logger.ZLogError($"[GameDb.UpdateItemAmount] ErrorCode = {ErrorCode.UpdateItemAmount_Fail_Invalid_Amount}, AccountId = {accountId}");
+                    return ErrorCode.UpdateItemAmount_Fail_Invalid_Amount;
+                }
+
                 // Update Data
                 var count = await _queryFactory.Query("ItemData")
                     .Where(new { UserItemId = checkData.UserItemId })
@@ -517,6 +600,7 @@ namespace TuesberryAPIServer.Services
         {
             List<ItemData> completeList = new List<ItemData>();
             List<Int32> deleteItemList = new List<Int32>();
+
             ErrorCode errorCode = ErrorCode.None;
 
             try
@@ -574,7 +658,7 @@ namespace TuesberryAPIServer.Services
                 errorCode = await DeleteItem(accountId, deleteItemList);
                 if (errorCode != ErrorCode.None)
                 {
-                    _logger.ZLogError($"[GameDb.DeleteOrUpdateItemzlq] ErrorCode : {ErrorCode.DeleteOrUpdateItem_Fail_Exception}, AccountId: {accountId}");
+                    _logger.ZLogError($"[GameDb.DeleteOrUpdateItem] ErrorCode = {ErrorCode.DeleteOrUpdateItem_Fail_Exception}, AccountId = {accountId}");
                     throw new Exception();
                 }
 
@@ -582,7 +666,15 @@ namespace TuesberryAPIServer.Services
             }
             catch
             {
-                _logger.ZLogError($"[GameDb.DeleteOrUpdateItemzlq] ErrorCode : {ErrorCode.DeleteOrUpdateItem_Fail_Exception}, AccountId: {accountId}");
+                _logger.ZLogError($"[GameDb.DeleteOrUpdateItem] ErrorCode = {ErrorCode.DeleteOrUpdateItem_Fail_Exception}, AccountId = {accountId}");
+                
+                // 롤백을 하지 말고, 그냥 로그만 남겨놓는다.
+                foreach(var item in completeList)
+                {
+                    _logger.ZLogError($"[GameDb.DeleteOrUpdateItem] Complete Delete List, AccountId: {accountId}, ItemCode = {item.ItemCode}" +
+                        $", Amount = {item.Amount}, EnchanceCount = {item.EnchanceCount}, Attack = {item.Attack}, Defence = {item.Defence}, Magic = {item.Magic}");
+                }
+
                 return ErrorCode.DeleteOrUpdateItem_Fail_Exception;
             }
         }
@@ -650,18 +742,16 @@ namespace TuesberryAPIServer.Services
                 // 메일 리스트에서 20개를 가져온다.
                 // 최신 메일 20개부터, ExpiryDate가 만료된 것은 제외
                 var mailboxQuery = _queryFactory.Query("Mailbox")
-                    .Select("MailId", "Title", "IsRead", "ExpiryDate")
+                    .Select("MailId", "Title", "IsRead", "IsReceived", "ExpiryDate")
                     .Where("AccountId", accountId)
-                    .WhereFalse("IsRead")
                     .Where("ExpiryDate", ">", DateTime.UtcNow)
                     .OrderByDesc("MailId")
                     .Limit(20).Offset(offset);
 
                 var mailList = await _queryFactory.Query("MailboxItem")
                     .Select(
-                        "Mailbox.MailId", "Mailbox.Title", "Mailbox.IsRead", "Mailbox.ExpiryDate",
-                        "MailboxItem.ItemCode", "MailboxItem.Amount", "MailboxItem.EnchanceCount",
-                        "MailboxItem.Attack", "MailboxItem.Defence", "MailboxItem.Magic")
+                        "Mailbox.MailId", "Mailbox.Title", "Mailbox.IsRead", "Mailbox.IsReceived", "Mailbox.ExpiryDate",
+                        "MailboxItem.ItemCode", "MailboxItem.Amount")
                     .Join(mailboxQuery.As("Mailbox"), j => j.On("Mailbox.MailId", "MailboxItem.MailId"))
                     .GetAsync<MailboxDataDb>();
 
@@ -683,6 +773,7 @@ namespace TuesberryAPIServer.Services
                             MailId = mail.MailId,
                             Title = mail.Title,
                             IsRead = mail.IsRead,
+                            IsReceived = mail.IsReceived,
                             ExpiryDate = mail.ExpiryDate,
                         });
                         lastInsertId = mail.MailId;
@@ -691,11 +782,7 @@ namespace TuesberryAPIServer.Services
                     mailboxDataList.Last().MailboxItemData.Add(new MailboxItemData
                     {
                         ItemCode = mail.ItemCode,
-                        Amount = mail.Amount,
-                        EnchanceCount = mail.EnchanceCount,
-                        Attack = mail.Attack,
-                        Defence = mail.Defence,
-                        Magic = mail.Magic
+                        Amount = mail.Amount
                     });
                 }
 
@@ -714,7 +801,7 @@ namespace TuesberryAPIServer.Services
             try
             {
                 // Check Mail Valid
-                var result = await IsValidMailId(accountId, mailId);
+                var result = await IsValidAndNotReadMailId(accountId, mailId);
                 if (!result)
                 {
                     _logger.ZLogError($"[GameDb.LoadMailDetail] ErrorCode = {ErrorCode.LoadMailDetail_Fail_Invalid_MailId}, AccountId = {accountId}, MailId = {mailId}");
@@ -747,7 +834,7 @@ namespace TuesberryAPIServer.Services
             try
             {
                 var mailItemData = await _queryFactory.Query("MailboxItem")
-                    .Select("ItemCode", "Amount", "EnchanceCount", "Attack", "Defence", "Magic")
+                    .Select("ItemCode", "Amount")
                     .Where("MailId", mailId)
                     .GetAsync<MailboxItemData>();
 
@@ -772,7 +859,7 @@ namespace TuesberryAPIServer.Services
             try
             {
                 // Check Mail Valid
-                var result = await IsValidMailId(accountId, mailId);
+                var result = await IsValidAndNotReceivedMailId(accountId, mailId);
                 if(!result)
                 {
                     _logger.ZLogError($"[GameDb.ReceiveMailItem] ErrorCode = {ErrorCode.ReceiveMailItem_Fail_Invalid_MailId}, AccountId = {accountId}");
@@ -788,31 +875,28 @@ namespace TuesberryAPIServer.Services
                 }
 
                 // add item in itemData table
+                List<ItemData> itemList = new List<ItemData>();
+
                 foreach(var mailItem in mailItemList)
                 {
                     ItemData itemData = new ItemData
                     {
                         ItemCode = mailItem.ItemCode,
                         Amount = mailItem.Amount,
-                        EnchanceCount = mailItem.EnchanceCount,
-                        Attack = mailItem.Attack,
-                        Defence = mailItem.Defence,
-                        Magic = mailItem.Magic
+                        EnchanceCount = 0,
+                        Attack = _masterDb.Items[mailItem.ItemCode].Attack,
+                        Defence = _masterDb.Items[mailItem.ItemCode].Defence,
+                        Magic = _masterDb.Items[mailItem.ItemCode].Magic
                     };
-                    errorCode = await InsertOrUpdateItem(accountId, itemData);
-                    if(errorCode != ErrorCode.None)
-                    {
-                        _logger.ZLogError($"[GameDb.ReceiveMailItem] ErrorCode = {ErrorCode.ReceiveMailItem_Fail_Add_Item_Exception}, AccountId = {accountId}");
-                        return ErrorCode.ReceiveMailItem_Fail_Add_Item_Exception;
-                    }
+
+                    itemList.Add(itemData);
                 }
-                
-                // set mail read
-                errorCode = await SetMailRead(accountId, mailId);
-                if(errorCode != ErrorCode.None)
+
+                errorCode = await InsertOrUpdateItem(accountId, itemList);
+                if (errorCode != ErrorCode.None)
                 {
-                    _logger.ZLogError($"[GameDb.ReceiveMailItem] ErrorCode = {ErrorCode.ReceiveMailItem_Fail_Set_Read_Exception}, AccountId = {accountId}");
-                    return ErrorCode.ReceiveMailItem_Fail_Set_Read_Exception;
+                    _logger.ZLogError($"[GameDb.ReceiveMailItem] ErrorCode = {ErrorCode.ReceiveMailItem_Fail_Add_Item_Exception}, AccountId = {accountId}");
+                    return ErrorCode.ReceiveMailItem_Fail_Add_Item_Exception;
                 }
 
                 _logger.ZLogDebug($"[GameDb.ReceiveMailItem] Complete, AccountId = {accountId}");
@@ -825,7 +909,7 @@ namespace TuesberryAPIServer.Services
             }
         }
 
-        public async Task<ErrorCode> SetMailRead(Int64 accountId, Int32 mailId)
+        public async Task<ErrorCode> SetMailRead(Int64 accountId, Int32 mailId, bool isRead = true)
         {
             try
             {
@@ -833,29 +917,63 @@ namespace TuesberryAPIServer.Services
                 var result = await IsValidMailId(accountId, mailId);
                 if (!result)
                 {
-                    _logger.ZLogError($"[GameDb.DeleteMail] ErrorCode = {ErrorCode.DeleteMail_Fail_Invalid_MailId}, AccountId = {accountId}");
-                    return ErrorCode.DeleteMail_Fail_Invalid_MailId;
+                    _logger.ZLogError($"[GameDb.SetMailRead] ErrorCode = {ErrorCode.SetMailRead_Fail_Invalid_MailId}, AccountId = {accountId}");
+                    return ErrorCode.SetMailRead_Fail_Invalid_MailId;
                 }
 
-                // just update "IsRead = true"
+                // just update IsRead 
                 var count = await _queryFactory.Query("Mailbox")
                     .Where(new {AccountId = accountId, MailId = mailId})
-                    .UpdateAsync(new { IsRead = true });
-
+                    .UpdateAsync(new { IsRead = isRead });
+                    
                 // count check
                 if(count != 1)
                 {
-                    _logger.ZLogError($"[GameDb.DeleteMail] ErrorCode = {ErrorCode.DeleteMail_Fail_Exception}, AccountId = {accountId}");
-                    return ErrorCode.DeleteMail_Fail_Exception;
+                    _logger.ZLogError($"[GameDb.SetMailRead] ErrorCode = {ErrorCode.SetMailRead_Fail_Exception}, AccountId = {accountId}");
+                    return ErrorCode.SetMailRead_Fail_Exception;
                 }
 
-                _logger.ZLogDebug($"[GameDb.DeleteMail] Delete Complete, AccountId = {accountId}, MailId = {mailId}");
+                _logger.ZLogDebug($"[GameDb.SetMailRead] Complete, AccountId = {accountId}, MailId = {mailId}");
                 return ErrorCode.None;
             }
             catch
             {
-                _logger.ZLogError($"[GameDb.DeleteMail] ErrorCode = {ErrorCode.DeleteMail_Fail_Exception}, AccountId = {accountId}");
-                return ErrorCode.DeleteMail_Fail_Exception;
+                _logger.ZLogError($"[GameDb.SetMailRead] ErrorCode = {ErrorCode.SetMailRead_Fail_Exception}, AccountId = {accountId}");
+                return ErrorCode.SetMailRead_Fail_Exception;
+            }
+        }
+
+        public async Task<ErrorCode> SetMailReceived(Int64 accountId, Int32 mailId, bool isReceived = true)
+        {
+            try
+            {
+                // valid check
+                var result = await IsValidMailId(accountId, mailId);
+                if (!result)
+                {
+                    _logger.ZLogError($"[GameDb.SetMailReceived] ErrorCode = {ErrorCode.SetMailReceived_Fail_Invalid_MailId}, AccountId = {accountId}");
+                    return ErrorCode.SetMailReceived_Fail_Invalid_MailId;
+                }
+
+                // just update IsRead 
+                var count = await _queryFactory.Query("Mailbox")
+                    .Where(new { AccountId = accountId, MailId = mailId })
+                    .UpdateAsync(new { IsReceived = isReceived });
+
+                // count check
+                if (count != 1)
+                {
+                    _logger.ZLogError($"[GameDb.SetMailReceived] ErrorCode = {ErrorCode.SetMailReceived_Fail_Exception}, AccountId = {accountId}");
+                    return ErrorCode.SetMailReceived_Fail_Exception;
+                }
+
+                _logger.ZLogDebug($"[GameDb.SetMailReceived] Complete, AccountId = {accountId}, MailId = {mailId}");
+                return ErrorCode.None;
+            }
+            catch
+            {
+                _logger.ZLogError($"[GameDb.SetMailReceived] ErrorCode = {ErrorCode.SetMailRead_Fail_Exception}, AccountId = {accountId}");
+                return ErrorCode.SetMailRead_Fail_Exception;
             }
         }
 
@@ -891,12 +1009,11 @@ namespace TuesberryAPIServer.Services
             {
                 var result = await _queryFactory.Query("Mailbox")
                     .Where(new { AccountId = accountId, MailId = mailId })
-                    .WhereFalse("IsRead")
                     .CountAsync<Int32>();
 
                 if (result != 1)
                 {
-                    _logger.ZLogError($"[GameDb.ReceiveMailItem] Inappropriate Mail Id, AccountId = {accountId}");
+                    _logger.ZLogError($"[GameDb.IsValidMailId] Inappropriate Mail Id, AccountId = {accountId}");
                     return false;
                 }
 
@@ -904,7 +1021,55 @@ namespace TuesberryAPIServer.Services
             }
             catch
             {
-                _logger.ZLogError($"[GameDb.ReceiveMailItem] ErrorCode = MailValidCheck_Fail_Exception , AccountId = {accountId}");
+                _logger.ZLogError($"[GameDb.IsValidMailId] Mail Valid Check Fail Exception , AccountId = {accountId}");
+                return false;
+            }
+        }
+
+        public async Task<bool> IsValidAndNotReadMailId(Int64 accountId, Int32 mailId)
+        {
+            try
+            {
+                var result = await _queryFactory.Query("Mailbox")
+                    .Where(new { AccountId = accountId, MailId = mailId })
+                    .WhereFalse("IsRead")
+                    .CountAsync<Int32>();
+
+                if (result != 1)
+                {
+                    _logger.ZLogError($"[GameDb.IsValidAndReadMailId] Inappropriate Mail Id, AccountId = {accountId}");
+                    return false;
+                }
+
+                return true;
+            }
+            catch
+            {
+                _logger.ZLogError($"[GameDb.IsValidAndReadMailId] Mail Valid Check Fail Exception , AccountId = {accountId}");
+                return false;
+            }
+        }
+
+        public async Task<bool> IsValidAndNotReceivedMailId(Int64 accountId, Int32 mailId)
+        {
+            try
+            {
+                var result = await _queryFactory.Query("Mailbox")
+                    .Where(new { AccountId = accountId, MailId = mailId })
+                    .WhereFalse("IsReceived")
+                    .CountAsync<Int32>();
+
+                if (result != 1)
+                {
+                    _logger.ZLogError($"[GameDb.IsValidAndReceivedMailId] Inappropriate Mail Id, AccountId = {accountId}");
+                    return false;
+                }
+
+                return true;
+            }
+            catch
+            {
+                _logger.ZLogError($"[GameDb.IsValidAndReceivedMailId] Mail Valid Check Fail Exception , AccountId = {accountId}");
                 return false;
             }
         }
@@ -923,17 +1088,18 @@ namespace TuesberryAPIServer.Services
                         Title = mailData.Title,
                         ExpiryDate = mailData.ExpiryDate,
                         IsRead = false,
+                        IsReceived = false,
                         Comment = comment
                     });
 
                 if (mailId == 0)
                 {
-                    _logger.ZLogError($"[InsertMail] ErrorCode = {ErrorCode.InsertMail_Fail_Mailbox_Insert_Fail}, AccountId = {accountId}");
+                    _logger.ZLogError($"[GameDb.InsertMail] ErrorCode = {ErrorCode.InsertMail_Fail_Mailbox_Insert_Fail}, AccountId = {accountId}");
                     return new Tuple<ErrorCode, Int32>(ErrorCode.InsertMail_Fail_Mailbox_Insert_Fail, 0);
                 }
 
                 // insert mail item data
-                var cols = new[] { "MailId", "ItemCode", "Amount", "EnchanceCount", "Attack", "Defence", "Magic" };
+                var cols = new[] { "MailId", "ItemCode", "Amount" };
                 object[][] data = new object[mailData.MailboxItemData.Count()][];
 
                 for(int i = 0; i < mailData.MailboxItemData.Count(); i++)
@@ -942,11 +1108,7 @@ namespace TuesberryAPIServer.Services
                     {
                         mailId,
                         mailData.MailboxItemData[i].ItemCode,
-                        mailData.MailboxItemData[i].Amount,
-                        mailData.MailboxItemData[i].EnchanceCount,
-                        mailData.MailboxItemData[i].Attack,
-                        mailData.MailboxItemData[i].Defence,
-                        mailData.MailboxItemData[i].Magic
+                        mailData.MailboxItemData[i].Amount
                     };
                 }
 
@@ -959,10 +1121,10 @@ namespace TuesberryAPIServer.Services
                     var errorCode = await DeleteMail(accountId, mailId);
                     if (errorCode != ErrorCode.None)
                     {
-                        _logger.ZLogError($"[InsertMail] Rollback Mailbox Data Fail, AccountId = {accountId}, MailId = {mailId}");
+                        _logger.ZLogError($"[GameDb.InsertMail] Rollback Mailbox Data Fail, AccountId = {accountId}, MailId = {mailId}");
                     }
 
-                    _logger.ZLogError($"[InsertMail] ErrorCode = {ErrorCode.InsertMail_Fail_Exception}, AccountId = {accountId}");
+                    _logger.ZLogError($"[GameDb.InsertMail] ErrorCode = {ErrorCode.InsertMail_Fail_Exception}, AccountId = {accountId}");
                     return new Tuple<ErrorCode, Int32>(ErrorCode.InsertMail_Fail_Exception, 0);
                 }
 
@@ -970,17 +1132,18 @@ namespace TuesberryAPIServer.Services
             }
             catch
             {
+                // rollback
                 // mailId != 0 이면, 넣은 메일을 삭제해줘야 함
                 if(mailId != 0)
                 {
                     var errorCode = await DeleteMail(accountId, mailId);
                     if(errorCode != ErrorCode.None)
                     {
-                        _logger.ZLogError($"[InsertMail] Rollback Mailbox Data Fail, AccountId = {accountId}, MailId = {mailId}");
+                        _logger.ZLogError($"[GameDb.InsertMail] Rollback Mailbox Data Fail, AccountId = {accountId}, MailId = {mailId}");
                     }
                 }
 
-                _logger.ZLogError($"[InsertMail] ErrorCode = {ErrorCode.InsertMail_Fail_Exception}, AccountId = {accountId}");
+                _logger.ZLogError($"[GameDb.InsertMail] ErrorCode = {ErrorCode.InsertMail_Fail_Exception}, AccountId = {accountId}");
                 return new Tuple<ErrorCode, Int32>(ErrorCode.InsertMail_Fail_Exception, 0);
             }
         }
@@ -998,16 +1161,16 @@ namespace TuesberryAPIServer.Services
 
                 if (result != 1)
                 {
-                    _logger.ZLogError($"[CreateAttendanceData] ErrorCode = {ErrorCode.CreateAttendanceData_Fail_Duplicate}, AccountId = {accountId}");
+                    _logger.ZLogError($"[GameDb.CreateAttendanceData] ErrorCode = {ErrorCode.CreateAttendanceData_Fail_Duplicate}, AccountId = {accountId}");
                     return ErrorCode.CreateAttendanceData_Fail_Duplicate;
                 }
 
-                _logger.ZLogDebug($"[CreateAttendanceData] Complete, AccountId = {accountId}");
+                _logger.ZLogDebug($"[GameDb.CreateAttendanceData] Complete, AccountId = {accountId}");
                 return ErrorCode.None;
             }
             catch
             {
-                _logger.ZLogError($"[CreateAttednaceData] ErrorCode = {ErrorCode.CreateAttendanceData_Fail_Exception}, AccountId = {accountId}");
+                _logger.ZLogError($"[GameDb.CreateAttednaceData] ErrorCode = {ErrorCode.CreateAttendanceData_Fail_Exception}, AccountId = {accountId}");
                 return ErrorCode.CreateAttendanceData_Fail_Exception;
             }
         }
@@ -1023,16 +1186,16 @@ namespace TuesberryAPIServer.Services
 
                 if(attendanceData is null)
                 {
-                    _logger.ZLogError($"[LoadAttendanceData] ErrorCode = {ErrorCode.AttendanceCheck_Fail_AccountId_Not_Exist}, AccountId = {accountId}");
+                    _logger.ZLogError($"[GameDb.LoadAttendanceData] ErrorCode = {ErrorCode.AttendanceCheck_Fail_AccountId_Not_Exist}, AccountId = {accountId}");
                     return new Tuple<ErrorCode, AttendanceData>(ErrorCode.AttendanceCheck_Fail_AccountId_Not_Exist, null);
                 }
 
-                _logger.ZLogDebug($"[LoadAttendanceData] Complete, AccountId = {accountId}");
+                _logger.ZLogDebug($"[GameDb.LoadAttendanceData] Complete, AccountId = {accountId}");
                 return new Tuple<ErrorCode, AttendanceData>(ErrorCode.None, attendanceData.First());
             }
             catch
             {
-                _logger.ZLogError($"[LoadAttendanceData] ErrorCode = {ErrorCode.AttendanceCheck_Fail_Exception}, AccountId = {accountId}");
+                _logger.ZLogError($"[GameDb.LoadAttendanceData] ErrorCode = {ErrorCode.AttendanceCheck_Fail_Exception}, AccountId = {accountId}");
                 return new Tuple<ErrorCode, AttendanceData>(ErrorCode.AttendanceCheck_Fail_Exception, null);
             }
         }
@@ -1051,16 +1214,16 @@ namespace TuesberryAPIServer.Services
 
                 if(count != 1)
                 {
-                    _logger.ZLogError($"[UpdateAttendanceData] ErrorCode = {ErrorCode.UpdateAttendanceData_Fail_Duplicate}, AccountId = {accountId}");
+                    _logger.ZLogError($"[GameDb.UpdateAttendanceData] ErrorCode = {ErrorCode.UpdateAttendanceData_Fail_Duplicate}, AccountId = {accountId}");
                     return ErrorCode.UpdateAttendanceData_Fail_Duplicate;
                 }
 
-                _logger.ZLogDebug($"[UpdateAttendanceData] Complete, AccountId = {accountId}");
+                _logger.ZLogDebug($"[GameDb.UpdateAttendanceData] Complete, AccountId = {accountId}");
                 return ErrorCode.None;
             }
             catch
             {
-                _logger.ZLogError($"[UpdateAttendanceData] ErrorCode = {ErrorCode.UpdateAttendanceDate_Fail_Exceiption}, AccountId = {accountId}");
+                _logger.ZLogError($"[GameDb.UpdateAttendanceData] ErrorCode = {ErrorCode.UpdateAttendanceDate_Fail_Exceiption}, AccountId = {accountId}");
                 return ErrorCode.UpdateAttendanceDate_Fail_Exceiption;
             }
         }
@@ -1114,6 +1277,5 @@ namespace TuesberryAPIServer.Services
                 return ErrorCode.InsertPaymentData_Fail_Exception;
             }
         }
-
     }
 }

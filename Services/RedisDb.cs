@@ -8,6 +8,13 @@ using ZLogger;
 
 namespace TuesberryAPIServer.Services
 {
+    public class RediskeyExpireTime
+    {
+        public const ushort NxKeyExpireSecond = 3;
+        public const ushort LoginKeyExpireMin = 60;
+        public const ushort PlayingInfoKeyExpireMin = 3;
+    }
+
     public class RedisDb : IMemoryDb
     {
         readonly ILogger<RedisDb> _logger;
@@ -41,8 +48,8 @@ namespace TuesberryAPIServer.Services
 
             try
             {
-                var redis = new RedisString<AuthUser>(_redisCon, key, null);
-                if (await redis.SetAsync(user, null) == false)
+                var redis = new RedisString<AuthUser>(_redisCon, key, LoginTimeSpan());
+                if (await redis.SetAsync(user, LoginTimeSpan()) == false)
                 {
                     _logger.ZLogError($"[RedisDb.RegisterUserAsync] Redis String set error, id = {id}");
                     result = ErrorCode.Login_Fail_Add_Redis;
@@ -124,7 +131,7 @@ namespace TuesberryAPIServer.Services
             try
             {
                 var redis = new RedisString<AuthUser>(_redisCon, key, null);
-                if(!await redis.DeleteAsync())
+                if (!await redis.DeleteAsync())
                 {
                     return ErrorCode.Logout_Fail_Id_Not_Exist;
                 }
@@ -142,7 +149,7 @@ namespace TuesberryAPIServer.Services
             try
             {
                 var redis = new RedisString<AuthUser>(_redisCon, key, null);
-                if(await redis.SetAsync(new AuthUser(), null, StackExchange.Redis.When.NotExists) == false)
+                if (await redis.SetAsync(new AuthUser(), NxKeyTimeSpan(), When.NotExists) == false)
                 {
                     _logger.ZLogError($"[RedisDb.SetUserReqLockAsync] Error = Key Duplicate, key = {key}");
                     return false;
@@ -159,9 +166,9 @@ namespace TuesberryAPIServer.Services
 
         public async Task<bool> DelUserReqLockAsync(string key)
         {
-            if(string.IsNullOrEmpty(key))
+            if (string.IsNullOrEmpty(key))
             {
-                return false;   
+                return false;
             }
 
             try
@@ -196,6 +203,185 @@ namespace TuesberryAPIServer.Services
                 _logger.ZLogError($"[RedisDb.GetNotice] Redis error");
                 return new Tuple<ErrorCode, string>(ErrorCode.Get_Notice_Fail_Exception, null);
             }
+        }
+
+        public async Task<ErrorCode> SetPlayingStage(Int64 accountId, Int32 stageNum)
+        {
+            var key = MemoryDbKeyMaker.MakePlayingInfoKey(accountId);
+            var stageKey = MemoryDbKeyMaker.StageKey;
+
+            try
+            {
+                var redis = new RedisDictionary<string, Int32>(_redisCon, key, PlayingInfoTimeSpan());
+                if (await redis.SetAsync(stageKey, stageNum, null, When.NotExists) == false)
+                {
+                    _logger.ZLogError($"[RedisDb.SetPlayingStage] ErrorCode = {ErrorCode.SetPlayingStage_Fail_Key_Duplicate}, AccountId = {accountId}, StageNum = {stageNum}");
+                    return ErrorCode.SetPlayingStage_Fail_Key_Duplicate;
+                }
+
+                _logger.ZLogDebug($"[RedisDb.SetPlayingStage] Complete, AccountId = {accountId}, StageNum = {stageNum}");
+                return ErrorCode.None;
+            }
+            catch
+            {
+                _logger.ZLogError($"[RedisDb.SetPlayingStage] ErrorCode = {ErrorCode.SetPlayingStage_Fail_Exception}, AccountId = {accountId}, StageNum = {stageNum}");
+                return ErrorCode.SetPlayingStage_Fail_Exception;
+            }
+        }
+
+        public async Task<Tuple<ErrorCode, Int32>> GetPlayingStage(Int64 accountId)
+        {
+            var key = MemoryDbKeyMaker.MakePlayingInfoKey(accountId);
+            var stageKey = MemoryDbKeyMaker.StageKey;
+
+            try
+            {
+                var redis = new RedisDictionary<string, Int32>(_redisCon, key, null);
+                var value = await redis.GetAsync(stageKey);
+
+                if (!value.HasValue)
+                {
+                    _logger.ZLogError($"[RedisDb.GetPlayingStage] ErrorCode = {ErrorCode.GetPlayingStage_Fail_Key_Not_Exist}, AccountId = {accountId}");
+                    return new Tuple<ErrorCode, Int32>(ErrorCode.GetPlayingStage_Fail_Key_Not_Exist, 0);
+                }
+
+                _logger.ZLogDebug($"[RedisDb.GetPlayingStage] Complete, AccountId = {accountId}");
+                return new Tuple<ErrorCode, Int32>(ErrorCode.None, value.Value);
+            }
+            catch
+            {
+                _logger.ZLogError($"[RedisDb.GetPlayingStage] ErrorCode = {ErrorCode.GetPlayingStage_Fail_Exception}, AccountId = {accountId}");
+                return new Tuple<ErrorCode, Int32>(ErrorCode.GetPlayingStage_Fail_Exception, 0);
+            }
+        }
+
+        public async Task<ErrorCode> DelPlayingStage(Int64 accountId)
+        {
+            var key = MemoryDbKeyMaker.MakePlayingInfoKey(accountId);
+
+            try
+            {
+                var redis = new RedisDictionary<string, Int32>(_redisCon, key, null);
+                if (!await redis.DeleteAsync())
+                {
+                    _logger.ZLogError($"[RedisDb.DelPlayingStage] ErrorCode = {ErrorCode.DelPlayingStage_Fail_Key_Not_Exist}, AccountId = {accountId}");
+                    return ErrorCode.DelPlayingStage_Fail_Key_Not_Exist;
+                }
+
+                _logger.ZLogDebug($"[RedisDb.DelPlayingStage] Complete, AccountId = {accountId}");
+                return ErrorCode.None;
+            }
+            catch
+            {
+                _logger.ZLogError($"[RedisDb.DelPlayingStage] ErrorCode = {ErrorCode.DelPlayingStage_Fail_Exception}, AccountId = {accountId}");
+                return ErrorCode.DelPlayingStage_Fail_Exception;
+            }
+        }
+
+        public async Task<ErrorCode> SetStageFoundItem(Int64 accountId, Int32 itemCode)
+        {
+            var key = MemoryDbKeyMaker.MakePlayingInfoKey(accountId);
+            var itemKey = MemoryDbKeyMaker.MakeStageItemKey(itemCode);
+
+            try
+            {
+                var redis = new RedisDictionary<string, Int32>(_redisCon, key, null);
+                var result = await redis.IncrementAsync(itemKey, 1);
+
+                _logger.ZLogDebug($"[RedisDb.SetStageFoundItem] Complete, AccountId = {accountId}, Result = {result}");
+                return ErrorCode.None;
+            }
+            catch
+            {
+                _logger.ZLogError($"[RedisDb.SetStageFoundItem] ErrorCode = {ErrorCode.SetStageFountItem_Fail_Exception}, AccountId = {accountId}");
+                return ErrorCode.SetStageFountItem_Fail_Exception;
+            }
+        }
+
+        public async Task<ErrorCode> SetStageKilledNpc(Int64 accountId, Int32 npcCode)
+        {
+            var key = MemoryDbKeyMaker.MakePlayingInfoKey(accountId);
+            var npcKey = MemoryDbKeyMaker.MakeStageNpcKey(npcCode);
+
+            try
+            {
+                var redis = new RedisDictionary<string, Int32>(_redisCon, key, null);
+                var result = await redis.IncrementAsync(npcKey, 1);
+
+                _logger.ZLogDebug($"[RedisDb.SetStageKilledNpc] Complete, AccountId = {accountId}, Result = {result}");
+                return ErrorCode.None;
+            }
+            catch
+            {
+                _logger.ZLogError($"[RedisDb.SetStageKilledNpc] ErrorCode = {ErrorCode.SetStageKilledNpc_Fail_Exception}, AccountId = {accountId}");
+                return ErrorCode.SetStageKilledNpc_Fail_Exception;
+            }
+        }
+
+        public async Task<Tuple<ErrorCode, Int32>> LoadStageKilledNpcNum(Int64 accountId, Int32 npcCode)
+        {
+            var key = MemoryDbKeyMaker.MakePlayingInfoKey(accountId);
+            var npcKey = MemoryDbKeyMaker.MakeStageNpcKey(npcCode);
+
+            try
+            {
+                var redis = new RedisDictionary<string, Int32>(_redisCon, key, null);
+                var npcNum = await redis.GetAsync(npcKey);
+
+                if(!npcNum.HasValue)
+                {
+                    _logger.ZLogError($"[RedisDb.LoadStageKilledNpcNum] ErrorCode = {ErrorCode.LoadStageKilledNpcNum_Fail_Not_Exist}, AccountId = {accountId}, NpcCode = {npcCode}");
+                    return new Tuple<ErrorCode, Int32>(ErrorCode.LoadStageKilledNpcNum_Fail_Not_Exist, 0);
+                }
+
+                _logger.ZLogDebug($"[RedisDb.LoadStageKilledNpcNum] Complete, AccountId = {accountId}, NpcCode = {npcCode}");
+                return new Tuple<ErrorCode, Int32>(ErrorCode.None, npcNum.Value);
+            }
+            catch
+            {
+                _logger.ZLogError($"[RedisDb.LoadStageKilledNpcNum] ErrorCode = {ErrorCode.LoadStageKilledNpcNum_Fail_Exception}, AccountId = {accountId}, NpcCode = {npcCode}");
+                return new Tuple<ErrorCode, Int32>(ErrorCode.LoadStageKilledNpcNum_Fail_Exception, 0);
+            }
+        }
+
+        public async Task<Tuple<ErrorCode, Dictionary<string, Int32>>> LoadPlayingStageInfo(Int64 accountId, Int32 stageNum)
+        {
+            var key = MemoryDbKeyMaker.MakePlayingInfoKey(accountId);
+
+            try
+            {
+                var redis = new RedisDictionary<string, Int32>(_redisCon, key, null);
+                var stageData = await redis.GetAllAsync();
+
+                if(stageData is null)
+                {
+                    _logger.ZLogError($"[RedisDb.LoadPlayingStageInfo] ErrorCode = {ErrorCode.LoadPlayingStageInfo_Fail_Not_Exist}, AccountId = {accountId}, StageNum = {stageNum}");
+                    return new Tuple<ErrorCode, Dictionary<string, Int32>>(ErrorCode.LoadPlayingStageInfo_Fail_Not_Exist, null);
+                }
+
+                _logger.ZLogDebug($"[RedisDb.LoadPlayingStageInfo] Complete, AccountId = {accountId}, StageNum = {stageNum}");
+                return new Tuple<ErrorCode, Dictionary<string, Int32>>(ErrorCode.None, stageData);
+            }
+            catch
+            {
+                _logger.ZLogError($"[RedisDb.LoadPlayingStageInfo] ErrorCode = {ErrorCode.LoadPlayingStageInfo_Fail_Exception}, AccountId = {accountId}, StageNum = {stageNum}");
+                return new Tuple<ErrorCode, Dictionary<string, Int32>>(ErrorCode.LoadPlayingStageInfo_Fail_Exception, null);
+            }
+        }
+
+        public TimeSpan LoginTimeSpan()
+        {
+            return TimeSpan.FromMinutes(RediskeyExpireTime.LoginKeyExpireMin);
+        }
+
+        public TimeSpan PlayingInfoTimeSpan()
+        {
+            return TimeSpan.FromMinutes(RediskeyExpireTime.PlayingInfoKeyExpireMin);
+        }
+
+        public TimeSpan NxKeyTimeSpan()
+        {
+            return TimeSpan.FromSeconds(RediskeyExpireTime.NxKeyExpireSecond);
         }
     }
 }

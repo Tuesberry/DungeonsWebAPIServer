@@ -42,11 +42,24 @@
         public Int32 ItemCode { get; set; } = 0;
     }
 
-    public class NpcMasterData
+    public class NpcMasterDataDb
     {
         public Int32 Code { get; set; } = 0;
         public Int32 NpcCode { get; set; } = 0;
         public Int32 Count { get; set; } = 0;
+        public Int32 Exp { get; set; } = 0;
+    }
+
+    public class NpcMasterData
+    {
+        public Int32 NpcCode { get; set; } = 0;
+        public Int32 Count { get; set; } = 0;
+        public Int32 Exp { get; set; } = 0;
+    }
+
+    public class LevelUpExpData
+    {
+        public Int32 Level { get; set; } = 0;
         public Int32 Exp { get; set; } = 0;
     }
 }

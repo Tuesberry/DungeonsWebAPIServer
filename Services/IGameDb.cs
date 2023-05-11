@@ -11,6 +11,12 @@ namespace TuesberryAPIServer.Services
 
         public Task<ErrorCode> UpdateMoney(Int64 accountId, Int32 amount);
 
+        public Task<Tuple<ErrorCode, Int32, Int32>> LoadLevelAndExp(Int64 accountId);
+
+        public Task<ErrorCode> UpdateLevelAndExp(Int64 accountId, Int32 level, Int32 exp);
+
+        public Task<Tuple<ErrorCode, Int32>> LoadFinalCompletedStageNum(Int64 accountId);
+
         public Task<ErrorCode> DeleteGameData(string userId);
 
         // --------- Item Data --------- //
@@ -48,12 +54,18 @@ namespace TuesberryAPIServer.Services
 
         public Task<ErrorCode> ReceiveMailItem(Int64 accountId, Int32 mailId);
 
-        public Task<ErrorCode> SetMailRead(Int64 accountId, Int32 mailId);
+        public Task<ErrorCode> SetMailRead(Int64 accountId, Int32 mailId, bool isRead = true);
+
+        public Task<ErrorCode> SetMailReceived(Int64 accountId, Int32 mailId, bool isReceived = true);
 
         public Task<ErrorCode> DeleteMail(Int64 accountId, Int32 mailId);
 
         public Task<bool> IsValidMailId(Int64 accountId, Int32 mailId);
         
+        public Task<bool> IsValidAndNotReadMailId(Int64 accountId, Int32 mailId);
+
+        public Task<bool> IsValidAndNotReceivedMailId(Int64 accountId, Int32 mailId);
+
         public Task<Tuple<ErrorCode, Int32>> InsertMail(Int64 accountId, MailboxData mailData, string comment);
 
         // --------- Attendance --------- //

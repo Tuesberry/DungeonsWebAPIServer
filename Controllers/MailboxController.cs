@@ -82,7 +82,6 @@ namespace TuesberryAPIServer.Controllers
             _logger.ZLogDebug($"[LoadMail] Load Mail List, page = {request.PageNum}, mail num = {mailList.Count}");
             response.MailboxDatum = mailList;
 
-
             return response;
         }
 
@@ -102,6 +101,14 @@ namespace TuesberryAPIServer.Controllers
             if(errorCode != ErrorCode.None)
             {
                 _logger.ZLogError($"[GetMailDetail] Get Mail Detail Fail , UserId = {request.Id}");
+                response.Result = errorCode;
+                return response;
+            }
+
+            errorCode = await _gameDb.SetMailRead(userInfo.AccountId, request.MailId);
+            if (errorCode != ErrorCode.None)
+            {
+                _logger.ZLogError($"[GetMailDetail] Set Mail Read Fail , UserId = {request.Id}");
                 response.Result = errorCode;
                 return response;
             }
@@ -129,6 +136,15 @@ namespace TuesberryAPIServer.Controllers
             if(errorCode != ErrorCode.None)
             {
                 _logger.ZLogError($"[GetMailItem] ReceiveMailItem Fail, UserId = {request.Id}");
+                response.Result = errorCode;
+                return response;
+            }
+
+            // set mail received
+            errorCode = await _gameDb.SetMailReceived(userInfo.AccountId, request.MailId);
+            if (errorCode != ErrorCode.None)
+            {
+                _logger.ZLogError($"[GetMailItem] Set Mail Received Fail, UserId = {request.Id}");
                 response.Result = errorCode;
                 return response;
             }

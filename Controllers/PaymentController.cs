@@ -96,11 +96,7 @@ namespace TuesberryAPIServer.Controllers
                 mailData.MailboxItemData.Add(new MailboxItemData
                 {
                     ItemCode = item.ItemCode,
-                    Amount = item.ItemCount,
-                    EnchanceCount = 0,
-                    Attack = _masterDb.Items[item.ItemCode].Attack,
-                    Defence = _masterDb.Items[item.ItemCode].Defence,
-                    Magic = _masterDb.Items[item.ItemCode].Magic
+                    Amount = item.ItemCount
                 });
             }
 

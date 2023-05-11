@@ -23,10 +23,38 @@ namespace TuesberryAPIServer.Controllers
             _masterDb = masterDb;
         }
 
-        [HttpPost]
-        public async Task<PKAttendanceResponse> Attendance([FromBody]PKAttendanceRequest request)
+        [HttpPost("LoadAttendance")]
+        public async Task<PkLoadAttendanceResponse> LoadAttendance([FromBody] PkLoadAttendanceRequest request)
         {
-            var response = new PKAttendanceResponse();
+            var response = new PkLoadAttendanceResponse();
+
+            // userInfo 가져오기
+            AuthUser userInfo = _httpContextAccessor.HttpContext.Items[nameof(AuthUser)] as AuthUser;
+            if (userInfo is null)
+            {
+                response.Result = ErrorCode.AuthToken_Access_Error;
+                return response;
+            }
+
+            // 출석 데이터 가져오기
+            var (errorCode, attendanceData) = await _gameDb.LoadAttendanceData(userInfo.AccountId);
+            if (errorCode != ErrorCode.None)
+            {
+                _logger.ZLogError($"[LoadAttendance] Load Attendance Data Fail, UserId = {request.Id}, AccountId = {userInfo.AccountId}");
+                response.Result = errorCode;
+                return response;
+            }
+
+            response.LastCheckDate = attendanceData.LastCheckDate;
+            response.ContinuousPeriod = attendanceData.ContinuousPeriod;
+
+            return response;
+        }
+
+        [HttpPost("CheckAttendance")]
+        public async Task<PkCheckAttendanceResponse> CheckAttendance([FromBody] PkCheckAttendanceRequest request)
+        {
+            var response = new PkCheckAttendanceResponse();
 
             // userInfo 가져오기
             AuthUser userInfo = _httpContextAccessor.HttpContext.Items[nameof(AuthUser)] as AuthUser;
@@ -40,7 +68,7 @@ namespace TuesberryAPIServer.Controllers
             var(errorCode, attendanceData) = await _gameDb.LoadAttendanceData(userInfo.AccountId);
             if(errorCode != ErrorCode.None)
             {
-                _logger.ZLogError($"[Attendance] Load Attendance Data Fail, UserId = {request.Id}, AccountId = {userInfo.AccountId}");
+                _logger.ZLogError($"[CheckAttendance] Load Attendance Data Fail, UserId = {request.Id}, AccountId = {userInfo.AccountId}");
                 response.Result = errorCode;
                 return response;
             }
@@ -49,7 +77,7 @@ namespace TuesberryAPIServer.Controllers
             errorCode = AttendanceChack(attendanceData);
             if(errorCode != ErrorCode.None)
             {
-                _logger.ZLogError($"[Attendance] ErrorCode = {errorCode}, UserId = {request.Id}, AccountId = {userInfo.AccountId}");
+                _logger.ZLogError($"[CheckAttendance] ErrorCode = {errorCode}, UserId = {request.Id}, AccountId = {userInfo.AccountId}");
                 response.Result = errorCode;
                 return response;
             }
@@ -61,7 +89,7 @@ namespace TuesberryAPIServer.Controllers
             (errorCode, var mailId) = await _gameDb.InsertMail(userInfo.AccountId, mailData, comment);
             if(errorCode != ErrorCode.None)
             {
-                _logger.ZLogError($"[Attendance] Insert Attendance Reward Mail Fail, UserId = {request.Id}, AccountId = {userInfo.AccountId}");
+                _logger.ZLogError($"[CheckAttendance] Insert Attendance Reward Mail Fail, UserId = {request.Id}, AccountId = {userInfo.AccountId}");
                 response.Result = errorCode;
                 return response;
             }
@@ -74,14 +102,14 @@ namespace TuesberryAPIServer.Controllers
                 var result = await _gameDb.DeleteMail(userInfo.AccountId, mailId);
                 if(result != ErrorCode.None)
                 {
-                    _logger.ZLogError($"[Attendance] Rollback Reward Mail Fail, UserId = {request.Id}, AccountId = {userInfo.AccountId}");
+                    _logger.ZLogError($"[CheckAttendance] Rollback Reward Mail Fail, UserId = {request.Id}, AccountId = {userInfo.AccountId}");
                 }
-                _logger.ZLogError($"[Attendance] Update AttendanceData Fail, UserId = {request.Id}, AccountId = {userInfo.AccountId}");
+                _logger.ZLogError($"[CheckAttendance] Update AttendanceData Fail, UserId = {request.Id}, AccountId = {userInfo.AccountId}");
                 response.Result = errorCode;
                 return response;
             }
 
-            _logger.ZLogDebug($"[Attendance] Complete, UserId = {request.Id}, AccountId = {userInfo.AccountId}");
+            _logger.ZLogDebug($"[CheckAttendance] Complete, UserId = {request.Id}, AccountId = {userInfo.AccountId}");
 
             response.ContinuousPeriod = attendanceData.ContinuousPeriod;
             return response;
@@ -124,11 +152,7 @@ namespace TuesberryAPIServer.Controllers
             mailData.MailboxItemData.Add(new MailboxItemData
             {
                 ItemCode = itemCode,
-                Amount = _masterDb.AttendanceRewards[attendanceData.ContinuousPeriod].Count,
-                EnchanceCount = 0,
-                Attack = _masterDb.Items[itemCode].Attack,
-                Defence = _masterDb.Items[itemCode].Defence,
-                Magic = _masterDb.Items[itemCode].Magic
+                Amount = _masterDb.AttendanceRewards[attendanceData.ContinuousPeriod].Count
             });
 
             string comment = $"{attendanceData.ContinuousPeriod}days Attendance Check. Would you like to receive your reward?";

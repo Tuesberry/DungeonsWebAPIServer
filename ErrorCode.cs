@@ -124,7 +124,49 @@
         UpdateItemAmount_Fail_Exception = 88,
         UpdateItemAmount_Fail_Not_Exist = 89,
         UpdateItemAmount_Fail_Duplicate_Update = 90,
+        UpdateItemAmount_Fail_Invalid_Amount = 91,
 
-        DeleteOrUpdateItem_Fail_Exception = 91,
+        DeleteOrUpdateItem_Fail_Exception = 92,
+
+        SelectStage_Fail_Invalid_SelectedStageNum = 93,
+
+        SetPlayingStage_Fail_Key_Duplicate = 94,
+        SetPlayingStage_Fail_Exception = 95,
+
+        GetPlayingStage_Fail_Key_Not_Exist = 96,
+        GetPlayingStage_Fail_Exception = 97,
+
+        DelPlayingStage_Fail_Key_Not_Exist = 98,
+        DelPlayingStage_Fail_Exception = 99,
+
+        SaveFoundItem_Fail_Invalid_StageNum = 100,
+        SaveFoundItem_Fail_Invalid_ItemCode = 101,
+
+        SaveKilledNpc_Fail_Invalid_StageNum = 102,
+        SaveKilledNpc_Fail_Invalid_ItemCode = 103,
+        SaveKilledNpc_Fail_Exceed_Number_Can_Appear = 104,
+
+        LoadLevelAndExp_Fail_Not_Exist = 105,
+        LoadLevelAndExp_Fail_Exception = 106,
+
+        UpdateLevelAndExp_Fail_AccountId_Not_Exist = 107,
+        UpdateLevelAndExp_Fail_Exception = 108,
+
+        LoadFinalCompletedStageNum_Fail_Exception = 109,
+
+        LoadPlayingStageInfo_Fail_Not_Exist = 110,
+        LoadPlayingStageInfo_Fail_Exception = 111,
+
+        SetStageFountItem_Fail_Exception = 112,
+        SetStageKilledNpc_Fail_Exception = 113,
+
+        SetMailRead_Fail_Invalid_MailId = 114,
+        SetMailRead_Fail_Exception = 115,
+
+        SetMailReceived_Fail_Invalid_MailId = 116,
+        SetMailReceived_Fail_Exception = 117,
+
+        LoadStageKilledNpcNum_Fail_Exception = 118,
+        LoadStageKilledNpcNum_Fail_Not_Exist = 119,
     }
 }
