@@ -226,16 +226,22 @@ namespace TuesberryAPIServer.Services
         {
             try
             {
-                ItemData itemData = new ItemData { 
-                    ItemCode = 1,
-                    Amount = 20,
-                    EnchanceCount = 0,
-                    Attack = _masterDb.Items[1].Attack,
-                    Defence = _masterDb.Items[1].Defence,
-                    Magic = _masterDb.Items[1].Magic
-                };
+                List<ItemData> itemList = new List<ItemData>();
 
-                var errorCode = await InsertItem(accountId, itemData);
+                foreach(var item in _masterDb.DefaultItem)
+                {
+                    itemList.Add(new ItemData
+                    {
+                        ItemCode = item.Key,
+                        Amount = item.Value,
+                        EnchanceCount = 0,
+                        Attack = _masterDb.Items[item.Key].Attack,
+                        Defence = _masterDb.Items[item.Key].Defence,
+                        Magic = _masterDb.Items[item.Key].Magic
+                    }); 
+                }
+
+                var errorCode = await InsertOrUpdateItem(accountId, itemList);
                 if (errorCode != ErrorCode.None)
                 {
                     _logger.ZLogError($"[GameDb.CreateDefaultItemData] ErrorCode = {errorCode}, AccountId = {accountId}");
@@ -454,6 +460,7 @@ namespace TuesberryAPIServer.Services
                             throw new Exception();
                         }
                         completeList.Add(item);
+                        continue;
                     }
 
                     // 겹침 가능 여부 확인
@@ -617,6 +624,7 @@ namespace TuesberryAPIServer.Services
                             throw new Exception();
                         }
                         completeList.Add(item);
+                        continue;
                     }
 
                     // 겹침 가능 여부 확인

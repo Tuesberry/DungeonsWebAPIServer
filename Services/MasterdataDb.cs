@@ -106,6 +106,12 @@ namespace TuesberryAPIServer.Services
                 {
                     LevelUpExp.Add(levelUpExp.Level, levelUpExp.Exp);
                 }
+                // default Item
+                var defaultItemData = _queryFactory.Query("DefaultItemMasterData").Get<DefaultItemData>();
+                foreach(var defaultItem in defaultItemData)
+                {
+                    DefaultItem.Add(defaultItem.ItemCode, defaultItem.Amount);
+                }
 
                 _logger.ZLogDebug($"[MasterdataDb.Init] Init Master Data Complete");
                 _connection.Close();
@@ -138,6 +144,8 @@ namespace TuesberryAPIServer.Services
         public Dictionary<Int32, List<NpcMasterData>> StageNpc { get; } = new Dictionary<Int32, List<NpcMasterData>>();
 
         public Dictionary<Int32, Int32> LevelUpExp { get; } = new Dictionary<Int32, Int32>();
+
+        public Dictionary<Int32, Int32> DefaultItem { get; } = new Dictionary<Int32, Int32>();
 
     }
 }

@@ -62,4 +62,10 @@
         public Int32 Level { get; set; } = 0;
         public Int32 Exp { get; set; } = 0;
     }
+
+    public class DefaultItemData
+    {
+        public Int32 ItemCode { get; set; } = 0;
+        public Int32 Amount { get; set; } = 0;
+    }
 }

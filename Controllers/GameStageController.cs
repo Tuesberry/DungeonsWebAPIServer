@@ -263,6 +263,7 @@ namespace TuesberryAPIServer.Controllers
 
             // 클리어 스테이지 정보 업데이트
 
+
             // 기존 레벨 & 경험치 로드
             (errorCode, var level, var exp) = await _gameDb.LoadLevelAndExp(userInfo.AccountId);
             if (errorCode != ErrorCode.None)

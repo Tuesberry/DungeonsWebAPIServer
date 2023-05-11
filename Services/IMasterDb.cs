@@ -27,5 +27,8 @@ namespace TuesberryAPIServer.Services
         public Dictionary<Int32, List<NpcMasterData>> StageNpc { get; }
 
         public Dictionary<Int32, Int32> LevelUpExp { get; }
+
+        public Dictionary<Int32, Int32> DefaultItem { get; }
+
     }
 }
