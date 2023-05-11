@@ -11,6 +11,8 @@ namespace TuesberryAPIServer.Services
 
         public Task<ErrorCode> UpdateMoney(Int64 accountId, Int32 amount);
 
+        public Task<ErrorCode> UpdateStage(Int64 accountId, Int32 stageNum);
+
         public Task<Tuple<ErrorCode, Int32, Int32>> LoadLevelAndExp(Int64 accountId);
 
         public Task<ErrorCode> UpdateLevelAndExp(Int64 accountId, Int32 level, Int32 exp);

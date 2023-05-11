@@ -3,6 +3,7 @@ using MySqlConnector;
 using SqlKata.Compilers;
 using SqlKata.Execution;
 using System.Data;
+using System.Reflection.Emit;
 using System.Reflection.PortableExecutable;
 using System.Threading;
 using TuesberryAPIServer.ModelDb;
@@ -129,6 +130,30 @@ namespace TuesberryAPIServer.Services
             {
                 _logger.ZLogError($"[GameDb.UpdateMoney] ErrorCode = {ErrorCode.UpdateMoney_Fail_Exception}, AccountId = {accountId}");
                 return ErrorCode.UpdateMoney_Fail_Exception;
+            }
+        }
+
+        public async Task<ErrorCode> UpdateStage(Int64 accountId, Int32 stageNum)
+        {
+            try
+            {
+                var result = await _queryFactory.Query("GameData")
+                    .Where("AccountId", accountId)
+                    .UpdateAsync(new { Stage = stageNum });
+
+                if (result != 1)
+                {
+                    _logger.ZLogError($"[GameDb.UpdateStage] ErrorCode = {ErrorCode.UpdateStage_Fail_AccountId_Not_Exist}, AccountId = {accountId}, Stage = {stageNum}");
+                    return ErrorCode.UpdateStage_Fail_AccountId_Not_Exist;
+                }
+
+                _logger.ZLogDebug($"[GameDb.UpdateStage] Complete, AccountId = {accountId}, Stage = {stageNum}");
+                return ErrorCode.None;
+            }
+            catch
+            {
+                _logger.ZLogError($"[GameDb.UpdateStage] ErrorCode = {ErrorCode.UpdateStage_Fail_Exception}, AccountId = {accountId}, Stage = {stageNum}");
+                return ErrorCode.UpdateStage_Fail_Exception;
             }
         }
 
@@ -493,12 +518,15 @@ namespace TuesberryAPIServer.Services
                     }
                 }
 
-                // Insert 해야 하는 아이템들, 한번에 insert
-                errorCode = await InsertItem(accountId, insertItemList);
-                if(errorCode != ErrorCode.None)
+                if(insertItemList.Count() > 0)
                 {
-                    _logger.ZLogError($"[GameDb.InsertOrUpdateItem] ErrorCode : {ErrorCode.InsertOrUpdate_Item_Data_Fail_Exception}, AccountId: {accountId}");
-                    throw new Exception();
+                    // Insert 해야 하는 아이템들, 한번에 insert
+                    errorCode = await InsertItem(accountId, insertItemList);
+                    if (errorCode != ErrorCode.None)
+                    {
+                        _logger.ZLogError($"[GameDb.InsertOrUpdateItem] ErrorCode : {ErrorCode.InsertOrUpdate_Item_Data_Fail_Exception}, AccountId: {accountId}");
+                        throw new Exception();
+                    }
                 }
 
                 return ErrorCode.None;

@@ -177,18 +177,10 @@ namespace TuesberryAPIServer.Controllers
             }
 
             // Npc 코드 검증
-            if (!IsValidNpcCode(request.StageNum, request.NpcCode))
+            if (await IsValidNpcCode(userInfo.AccountId, request.StageNum, request.NpcCode) == false)
             {
                 _logger.ZLogError($"[GameStageController.SaveKilledNpc] ErrorCode = {ErrorCode.SaveKilledNpc_Fail_Invalid_ItemCode}, AccountId = {userInfo.AccountId}, StageNum = {request.StageNum}, NpcCode = {request.NpcCode}");
                 response.Result = ErrorCode.SaveKilledNpc_Fail_Invalid_ItemCode;
-                return response;
-            }
-
-            // 스테이지에 나타날 수 있는 Npc 수를 초과했는지 검증
-            if(await IsExceedNpcNum(userInfo.AccountId, request.StageNum, request.NpcCode))
-            {
-                _logger.ZLogError($"[GameStageController.SaveKilledNpc] ErrorCode = {ErrorCode.SaveKilledNpc_Fail_Exceed_Number_Can_Appear}, AccountId = {userInfo.AccountId}, StageNum = {request.StageNum}, NpcCode = {request.NpcCode}");
-                response.Result = ErrorCode.SaveKilledNpc_Fail_Exceed_Number_Can_Appear;
                 return response;
             }
 
@@ -262,7 +254,13 @@ namespace TuesberryAPIServer.Controllers
             }
 
             // 클리어 스테이지 정보 업데이트
-
+            errorCode = await _gameDb.UpdateStage(userInfo.AccountId, request.StageNum);
+            if(errorCode != ErrorCode.None)
+            {
+                _logger.ZLogError($"[GameStageController.EndStage] Update Stage Fail, AccountId = {userInfo.AccountId}, StageNum = {request.StageNum}");
+                response.Result = errorCode;
+                return response;
+            }
 
             // 기존 레벨 & 경험치 로드
             (errorCode, var level, var exp) = await _gameDb.LoadLevelAndExp(userInfo.AccountId);
@@ -278,6 +276,14 @@ namespace TuesberryAPIServer.Controllers
             if(errorCode != ErrorCode.None)
             {
                 _logger.ZLogError($"[GameStageController.EndStage] Give Exp And Update Level Fail, AccountId = {userInfo.AccountId}, StageNum = {request.StageNum}");
+
+                // 클리어 스테이지 정보 롤백
+                var rollbackResult = await _gameDb.UpdateStage(userInfo.AccountId, request.StageNum-1);
+                if (rollbackResult != ErrorCode.None)
+                {
+                    _logger.ZLogError($"[GameStageController.EndStage] Rollback Stage Fail, AccountId = {userInfo.AccountId}, StageNum = {request.StageNum}");
+                }
+
                 response.Result = errorCode;
                 return response;
             }
@@ -288,11 +294,17 @@ namespace TuesberryAPIServer.Controllers
             {
                 _logger.ZLogError($"[GameStageController.EndStage] Give Reward Items Fail, AccountId = {userInfo.AccountId}, StageNum = {request.StageNum}");
 
-                // 경험치 & 레벨 롤백
-                var rollbackResult = await _gameDb.UpdateLevelAndExp(userInfo.AccountId, level, exp);
+                // 클리어 스테이지 정보 롤백
+                var rollbackResult = await _gameDb.UpdateStage(userInfo.AccountId, request.StageNum - 1);
                 if (rollbackResult != ErrorCode.None)
                 {
-                    _logger.ZLogError($"[GameStageController.GiveExpAndUpdateLevel] Rollback Level & Exp Fail, AccountId = {userInfo.AccountId}, StageNum = {stageNum}");
+                    _logger.ZLogError($"[GameStageController.EndStage] Rollback Stage Fail, AccountId = {userInfo.AccountId}, StageNum = {request.StageNum}");
+                }
+                // 경험치 & 레벨 롤백
+                rollbackResult = await _gameDb.UpdateLevelAndExp(userInfo.AccountId, level, exp);
+                if (rollbackResult != ErrorCode.None)
+                {
+                    _logger.ZLogError($"[GameStageController.EndStage] Rollback Level & Exp Fail, AccountId = {userInfo.AccountId}, StageNum = {stageNum}");
                 }
 
                 response.Result = errorCode;
@@ -305,17 +317,23 @@ namespace TuesberryAPIServer.Controllers
             {
                 _logger.ZLogError($"[GameStageController.EndStage] Delete Playing Stage Info Fail, AccountId = {userInfo.AccountId}, StageNum = {request.StageNum}");
 
-                // 경험치 & 레벨 롤백
-                var rollbackResult = await _gameDb.UpdateLevelAndExp(userInfo.AccountId, level, exp);
+                // 클리어 스테이지 정보 롤백
+                var rollbackResult = await _gameDb.UpdateStage(userInfo.AccountId, request.StageNum - 1);
                 if (rollbackResult != ErrorCode.None)
                 {
-                    _logger.ZLogError($"[GameStageController.GiveExpAndUpdateLevel] Rollback Level & Exp Fail, AccountId = {userInfo.AccountId}, StageNum = {stageNum}");
+                    _logger.ZLogError($"[GameStageController.EndStage] Rollback Stage Fail, AccountId = {userInfo.AccountId}, StageNum = {request.StageNum}");
+                }
+                // 경험치 & 레벨 롤백
+                rollbackResult = await _gameDb.UpdateLevelAndExp(userInfo.AccountId, level, exp);
+                if (rollbackResult != ErrorCode.None)
+                {
+                    _logger.ZLogError($"[GameStageController.EndStage] Rollback Level & Exp Fail, AccountId = {userInfo.AccountId}, StageNum = {stageNum}");
                 }
                 // 찾은 아이템 롤백 
                 rollbackResult = await _gameDb.DeleteOrUpdateItem(userInfo.AccountId, items);
                 if(rollbackResult != ErrorCode.None)
                 {
-                    _logger.ZLogError($"[GameStageController.GiveExpAndUpdateLevel] Rollback Items Fail, AccountId = {userInfo.AccountId}, StageNum = {stageNum}");
+                    _logger.ZLogError($"[GameStageController.EndStage] Rollback Items Fail, AccountId = {userInfo.AccountId}, StageNum = {stageNum}");
                 }
 
                 response.Result = errorCode;
@@ -330,43 +348,32 @@ namespace TuesberryAPIServer.Controllers
             return response;
         }
 
-        bool IsValidNpcCode(Int32 stageNum, Int32 npcCode)
-        {
-            foreach(var npcData in _masterDb.StageNpc[stageNum])
-            {
-                if(npcData.NpcCode == npcCode)
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        async Task<bool> IsExceedNpcNum(Int64 accountId, Int32 stageNum, Int32 npcCode)
+        async Task<bool> IsValidNpcCode(Int64 accountId, Int32 stageNum, Int32 npcCode)
         {
             var (errorCode, npcNum) = await _memoryDb.LoadStageKilledNpcNum(accountId, npcCode);
-            if(errorCode == ErrorCode.LoadStageKilledNpcNum_Fail_Exception)
+            if (errorCode == ErrorCode.LoadStageKilledNpcNum_Fail_Exception)
             {
                 _logger.ZLogError($"[GameStageController.IsExceedNpcNum] Load Stage Killed Enemy Num Fail, AccountId = {accountId}, StageNum = {stageNum}, NpcCode = {npcCode}");
-                return true;
+                return false;
             }
 
+            // npc code 존재 확인 & 스테이지 내의 npc 수를 초과했는지 확인
             foreach (var npc in _masterDb.StageNpc[stageNum])
             {
                 if (npc.NpcCode == npcCode)
                 {
-                    if(npc.Count <= npcNum)
+                    if (npc.Count <= npcNum)
                     {
-                        return true;
+                        return false;
                     }
                     else
                     {
-                        return false;
+                        return true;
                     }
                 }
             }
 
-            return true;
+            return false;
         }
 
         bool IsStageClear(Int32 stageNum, Dictionary<string, Int32> stageData)
@@ -427,7 +434,7 @@ namespace TuesberryAPIServer.Controllers
         {
             exp += updateExp;
 
-            while(_masterDb.LevelUpExp[level] >= exp)
+            while(_masterDb.LevelUpExp[level] <= exp)
             {
                 exp -= _masterDb.LevelUpExp[level];
                 level += 1;

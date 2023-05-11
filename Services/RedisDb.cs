@@ -12,7 +12,7 @@ namespace TuesberryAPIServer.Services
     {
         public const ushort NxKeyExpireSecond = 3;
         public const ushort LoginKeyExpireMin = 60;
-        public const ushort PlayingInfoKeyExpireMin = 3;
+        public const ushort PlayingInfoKeyExpireMin = 3000; //test 용도
     }
 
     public class RedisDb : IMemoryDb

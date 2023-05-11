@@ -168,5 +168,8 @@
 
         LoadStageKilledNpcNum_Fail_Exception = 118,
         LoadStageKilledNpcNum_Fail_Not_Exist = 119,
+
+        UpdateStage_Fail_Exception = 120,
+        UpdateStage_Fail_AccountId_Not_Exist = 121,
     }
 }
