@@ -277,12 +277,8 @@ namespace TuesberryAPIServer.Controllers
             {
                 _logger.ZLogError($"[GameStageController.EndStage] Give Exp And Update Level Fail, AccountId = {userInfo.AccountId}, StageNum = {request.StageNum}");
 
-                // 클리어 스테이지 정보 롤백
-                var rollbackResult = await _gameDb.UpdateStage(userInfo.AccountId, request.StageNum-1);
-                if (rollbackResult != ErrorCode.None)
-                {
-                    _logger.ZLogError($"[GameStageController.EndStage] Rollback Stage Fail, AccountId = {userInfo.AccountId}, StageNum = {request.StageNum}");
-                }
+                // 데이터 롤백
+                await RollbackStage(userInfo.AccountId, request.StageNum - 1);
 
                 response.Result = errorCode;
                 return response;
@@ -294,18 +290,8 @@ namespace TuesberryAPIServer.Controllers
             {
                 _logger.ZLogError($"[GameStageController.EndStage] Give Reward Items Fail, AccountId = {userInfo.AccountId}, StageNum = {request.StageNum}");
 
-                // 클리어 스테이지 정보 롤백
-                var rollbackResult = await _gameDb.UpdateStage(userInfo.AccountId, request.StageNum - 1);
-                if (rollbackResult != ErrorCode.None)
-                {
-                    _logger.ZLogError($"[GameStageController.EndStage] Rollback Stage Fail, AccountId = {userInfo.AccountId}, StageNum = {request.StageNum}");
-                }
-                // 경험치 & 레벨 롤백
-                rollbackResult = await _gameDb.UpdateLevelAndExp(userInfo.AccountId, level, exp);
-                if (rollbackResult != ErrorCode.None)
-                {
-                    _logger.ZLogError($"[GameStageController.EndStage] Rollback Level & Exp Fail, AccountId = {userInfo.AccountId}, StageNum = {stageNum}");
-                }
+                // 데이터 롤백
+                await RollbackStageAndLevel(userInfo.AccountId, request.StageNum - 1, level, exp);
 
                 response.Result = errorCode;
                 return response;
@@ -317,24 +303,8 @@ namespace TuesberryAPIServer.Controllers
             {
                 _logger.ZLogError($"[GameStageController.EndStage] Delete Playing Stage Info Fail, AccountId = {userInfo.AccountId}, StageNum = {request.StageNum}");
 
-                // 클리어 스테이지 정보 롤백
-                var rollbackResult = await _gameDb.UpdateStage(userInfo.AccountId, request.StageNum - 1);
-                if (rollbackResult != ErrorCode.None)
-                {
-                    _logger.ZLogError($"[GameStageController.EndStage] Rollback Stage Fail, AccountId = {userInfo.AccountId}, StageNum = {request.StageNum}");
-                }
-                // 경험치 & 레벨 롤백
-                rollbackResult = await _gameDb.UpdateLevelAndExp(userInfo.AccountId, level, exp);
-                if (rollbackResult != ErrorCode.None)
-                {
-                    _logger.ZLogError($"[GameStageController.EndStage] Rollback Level & Exp Fail, AccountId = {userInfo.AccountId}, StageNum = {stageNum}");
-                }
-                // 찾은 아이템 롤백 
-                rollbackResult = await _gameDb.DeleteOrUpdateItem(userInfo.AccountId, items);
-                if(rollbackResult != ErrorCode.None)
-                {
-                    _logger.ZLogError($"[GameStageController.EndStage] Rollback Items Fail, AccountId = {userInfo.AccountId}, StageNum = {stageNum}");
-                }
+                // 데이터 롤백
+                await RollbackStageAndLevelAndItems(userInfo.AccountId, request.StageNum - 1, level, exp, items);
 
                 response.Result = errorCode;
                 return response;
@@ -346,6 +316,54 @@ namespace TuesberryAPIServer.Controllers
             response.Items = items;
 
             return response;
+        }
+
+        async Task RollbackStage(Int64 accountId, Int32 stageNum)
+        {
+            // 클리어 스테이지 정보 롤백
+            var rollbackResult = await _gameDb.UpdateStage(accountId, stageNum);
+            if (rollbackResult != ErrorCode.None)
+            {
+                _logger.ZLogError($"[GameStageController.EndStage] Rollback Stage Fail, AccountId = {accountId}, StageNum = {accountId}");
+            }
+        }
+
+        async Task RollbackStageAndLevel(Int64 accountId, Int32 stageNum, Int32 level, Int32 exp)
+        {
+            // 클리어 스테이지 정보 롤백
+            var rollbackResult = await _gameDb.UpdateStage(accountId, stageNum);
+            if (rollbackResult != ErrorCode.None)
+            {
+                _logger.ZLogError($"[GameStageController.EndStage] Rollback Stage Fail, AccountId = {accountId}, StageNum = {accountId}");
+            }
+            // 경험치 & 레벨 롤백
+            rollbackResult = await _gameDb.UpdateLevelAndExp(accountId, level, exp);
+            if (rollbackResult != ErrorCode.None)
+            {
+                _logger.ZLogError($"[GameStageController.EndStage] Rollback Level & Exp Fail, AccountId = {accountId}, StageNum = {stageNum}");
+            }
+        }
+
+        async Task RollbackStageAndLevelAndItems(Int64 accountId, Int32 stageNum, Int32 level, Int32 exp, List<ItemData> items)
+        {
+            // 클리어 스테이지 정보 롤백
+            var rollbackResult = await _gameDb.UpdateStage(accountId, stageNum);
+            if (rollbackResult != ErrorCode.None)
+            {
+                _logger.ZLogError($"[GameStageController.EndStage] Rollback Stage Fail, AccountId = {accountId}, StageNum = {accountId}");
+            }
+            // 경험치 & 레벨 롤백
+            rollbackResult = await _gameDb.UpdateLevelAndExp(accountId, level, exp);
+            if (rollbackResult != ErrorCode.None)
+            {
+                _logger.ZLogError($"[GameStageController.EndStage] Rollback Level & Exp Fail, AccountId = {accountId}, StageNum = {stageNum}");
+            }
+            // 찾은 아이템 롤백 
+            rollbackResult = await _gameDb.DeleteOrUpdateItem(accountId, items);
+            if (rollbackResult != ErrorCode.None)
+            {
+                _logger.ZLogError($"[GameStageController.EndStage] Rollback Items Fail, AccountId = {accountId}, StageNum = {stageNum}");
+            }
         }
 
         async Task<bool> IsValidNpcCode(Int64 accountId, Int32 stageNum, Int32 npcCode)
