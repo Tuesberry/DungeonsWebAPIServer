@@ -59,9 +59,8 @@ namespace TuesberryAPIServer.Middleware
             }
             else
             {
-                context.Response.StatusCode = 400;
-            }
-            
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+            }            
         }
 
         async Task<ErrorCode> EnterChat(WebSocket webSocket, Int32 channel)

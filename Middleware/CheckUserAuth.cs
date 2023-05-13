@@ -23,7 +23,7 @@ namespace TuesberryAPIServer.Middleware
         {
             var path = context.Request.Path.Value;
             if (string.Compare(path, "/CreateAccount", StringComparison.OrdinalIgnoreCase) == 0 ||
-                string.Compare(path, "/Login", StringComparison.OrdinalIgnoreCase) == 0) 
+                string.Compare(path, "/Login", StringComparison.OrdinalIgnoreCase) == 0 ) 
             {
                 // call the next delegate/middleware in the pipeline
                 await _next(context);

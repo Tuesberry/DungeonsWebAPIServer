@@ -22,7 +22,7 @@ namespace TuesberryAPIServer.Middleware
         public async Task InvokeAsync(HttpContext context)
         {
             var path = context.Request.Path.Value;
-            if(string.Compare(path, "/CreateAccount", StringComparison.OrdinalIgnoreCase) == 0)
+            if(string.Compare(path, "/CreateAccount", StringComparison.OrdinalIgnoreCase) == 0 )
             {
                 // call the next delegate/middleware in the pipeline
                 await _next(context);
