@@ -7,6 +7,7 @@ using StackExchange.Redis;
 using System;
 using System.Net.Sockets;
 using System.Net.WebSockets;
+using System.Reflection.Emit;
 using System.Text;
 using TuesberryAPIServer.ModelDb;
 using ZLogger;
@@ -344,6 +345,33 @@ namespace TuesberryAPIServer.Services
             }
         }
 
+        public async Task<Tuple<ErrorCode, Int32>> LoadStageFoundItemNum(Int64 accountId, Int32 itemCode)
+        {
+            var key = MemoryDbKeyMaker.MakePlayingInfoKey(accountId);
+            var itemKey = MemoryDbKeyMaker.MakeStageItemKey(itemCode);
+
+            try
+            {
+                var redis = new RedisDictionary<string, Int32>(_redisCon, key, null);
+                var itemNum = await redis.GetAsync(itemKey);
+
+                if (!itemNum.HasValue)
+                {
+                    _logger.ZLogError($"[RedisDb.LoadStageFoundItemNum] ErrorCode = {ErrorCode.LoadStageFoundItemNum_Fail_Not_Exist}, AccountId = {accountId}, ItemCode = {itemCode}");
+                    return new Tuple<ErrorCode, Int32>(ErrorCode.LoadStageFoundItemNum_Fail_Not_Exist, 0);
+                }
+
+                _logger.ZLogDebug($"[RedisDb.LoadStageFoundItemNum] Complete, AccountId = {accountId}, ItemCode = {itemCode}");
+                return new Tuple<ErrorCode, Int32>(ErrorCode.None, itemNum.Value);
+            }
+            catch
+            {
+                _logger.ZLogError($"[RedisDb.LoadStageFoundItemNum] ErrorCode = {ErrorCode.LoadStageFoundItemNum_Fail_Exception}, AccountId = {accountId}, ItemCode = {itemCode}");
+                return new Tuple<ErrorCode, Int32>(ErrorCode.LoadStageFoundItemNum_Fail_Exception, 0);
+            }
+        }
+
+
         public async Task<Tuple<ErrorCode, Int32>> LoadStageKilledNpcNum(Int64 accountId, Int32 npcCode)
         {
             var key = MemoryDbKeyMaker.MakePlayingInfoKey(accountId);
@@ -416,7 +444,7 @@ namespace TuesberryAPIServer.Services
 
                     var result = await redis.IncrementAsync(i, 1);
 
-                    _logger.ZLogInformation($"[RedisDb.AllocateChannel] Complete, Channel = {i}, Result = {result}");
+                    _logger.ZLogDebug($"[RedisDb.AllocateChannel] Complete, Channel = {i}, Result = {result}");
                     return new Tuple<ErrorCode, Int32>(ErrorCode.None, i);
                 }
 

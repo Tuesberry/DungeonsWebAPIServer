@@ -26,7 +26,7 @@ namespace TuesberryAPIServer.ModelReqRes
     {
         public ErrorCode Result { get; set; } = ErrorCode.None;
 
-        public List<Int32> StageItems { get; set; } = new List<Int32>();
+        public Dictionary<Int32, Int32> StageItems { get; set; } = new Dictionary<Int32, Int32>();
 
         public List<NpcMasterData> StageNpcs { get; set; } = new List<NpcMasterData>();
 

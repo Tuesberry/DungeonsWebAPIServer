@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using System.Reflection.Emit;
 using TuesberryAPIServer.ModelDb;
 using TuesberryAPIServer.ModelReqRes;
 using TuesberryAPIServer.Services;
@@ -128,7 +129,7 @@ namespace TuesberryAPIServer.Controllers
             }
 
             // 찾은 아이템 코드 검증
-            if(!_masterDb.StageItems[stageNum].Contains(request.ItemCode))
+            if(await IsValidItemCode(userInfo.AccountId, request.StageNum, request.ItemCode) == false)
             {
                 _logger.ZLogError($"[GameStageController.SaveFoundItem] ErrorCode = {ErrorCode.SaveFoundItem_Fail_Invalid_ItemCode}, AccountId = {userInfo.AccountId}, StageNum = {request.StageNum}, ItemCode = {request.ItemCode}");
                 response.Result = ErrorCode.SaveFoundItem_Fail_Invalid_ItemCode;
@@ -291,7 +292,8 @@ namespace TuesberryAPIServer.Controllers
                 _logger.ZLogError($"[GameStageController.EndStage] Give Reward Items Fail, AccountId = {userInfo.AccountId}, StageNum = {request.StageNum}");
 
                 // 데이터 롤백
-                await RollbackStageAndLevel(userInfo.AccountId, request.StageNum - 1, level, exp);
+                await RollbackStage(userInfo.AccountId, request.StageNum - 1);
+                await RollbackLevel(userInfo.AccountId, level, exp);
 
                 response.Result = errorCode;
                 return response;
@@ -304,7 +306,9 @@ namespace TuesberryAPIServer.Controllers
                 _logger.ZLogError($"[GameStageController.EndStage] Delete Playing Stage Info Fail, AccountId = {userInfo.AccountId}, StageNum = {request.StageNum}");
 
                 // 데이터 롤백
-                await RollbackStageAndLevelAndItems(userInfo.AccountId, request.StageNum - 1, level, exp, items);
+                await RollbackStage(userInfo.AccountId, request.StageNum - 1);
+                await RollbackLevel(userInfo.AccountId, level, exp);
+                await RollbackItem(userInfo.AccountId, items);
 
                 response.Result = errorCode;
                 return response;
@@ -328,42 +332,52 @@ namespace TuesberryAPIServer.Controllers
             }
         }
 
-        async Task RollbackStageAndLevel(Int64 accountId, Int32 stageNum, Int32 level, Int32 exp)
+        async Task RollbackLevel(Int64 accountId, Int32 level, Int32 exp)
         {
-            // 클리어 스테이지 정보 롤백
-            var rollbackResult = await _gameDb.UpdateStage(accountId, stageNum);
-            if (rollbackResult != ErrorCode.None)
-            {
-                _logger.ZLogError($"[GameStageController.EndStage] Rollback Stage Fail, AccountId = {accountId}, StageNum = {accountId}");
-            }
             // 경험치 & 레벨 롤백
-            rollbackResult = await _gameDb.UpdateLevelAndExp(accountId, level, exp);
+            var rollbackResult = await _gameDb.UpdateLevelAndExp(accountId, level, exp);
             if (rollbackResult != ErrorCode.None)
             {
-                _logger.ZLogError($"[GameStageController.EndStage] Rollback Level & Exp Fail, AccountId = {accountId}, StageNum = {stageNum}");
+                _logger.ZLogError($"[GameStageController.EndStage] Rollback Level & Exp Fail, AccountId = {accountId}, Level = {level}, Exp = {exp}");
             }
         }
 
-        async Task RollbackStageAndLevelAndItems(Int64 accountId, Int32 stageNum, Int32 level, Int32 exp, List<ItemData> items)
+        async Task RollbackItem(Int64 accountId, List<ItemData> items)
         {
-            // 클리어 스테이지 정보 롤백
-            var rollbackResult = await _gameDb.UpdateStage(accountId, stageNum);
-            if (rollbackResult != ErrorCode.None)
-            {
-                _logger.ZLogError($"[GameStageController.EndStage] Rollback Stage Fail, AccountId = {accountId}, StageNum = {accountId}");
-            }
-            // 경험치 & 레벨 롤백
-            rollbackResult = await _gameDb.UpdateLevelAndExp(accountId, level, exp);
-            if (rollbackResult != ErrorCode.None)
-            {
-                _logger.ZLogError($"[GameStageController.EndStage] Rollback Level & Exp Fail, AccountId = {accountId}, StageNum = {stageNum}");
-            }
             // 찾은 아이템 롤백 
-            rollbackResult = await _gameDb.DeleteOrUpdateItem(accountId, items);
+            var rollbackResult = await _gameDb.DeleteOrUpdateItem(accountId, items);
             if (rollbackResult != ErrorCode.None)
             {
-                _logger.ZLogError($"[GameStageController.EndStage] Rollback Items Fail, AccountId = {accountId}, StageNum = {stageNum}");
+                _logger.ZLogError($"[GameStageController.EndStage] Rollback Items Fail, AccountId = {accountId}");
             }
+        }
+
+        async Task<bool> IsValidItemCode(Int64 accountId, Int32 stageNum, Int32 itemCode)
+        {
+            var (errorCode, itemNum) = await _memoryDb.LoadStageFoundItemNum(accountId, itemCode);
+            if(errorCode == ErrorCode.LoadStageFoundItemNum_Fail_Exception)
+            {
+                _logger.ZLogError($"[GameStageController.IsValidItemCode] Load Stage Killed Enemy Num Fail, AccountId = {accountId}, StageNum = {stageNum}, ItemCode = {itemCode}");
+                return false;
+            }
+
+            // item code 존재 확인, 스테이지 내의 item 수를 초과했는지 확인
+            foreach(var item in _masterDb.StageItems[stageNum])
+            {
+                if(item.Key == itemCode)
+                {
+                    if(item.Value <= itemNum)
+                    {
+                        return false;
+                    }
+                    else
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         async Task<bool> IsValidNpcCode(Int64 accountId, Int32 stageNum, Int32 npcCode)
@@ -371,7 +385,7 @@ namespace TuesberryAPIServer.Controllers
             var (errorCode, npcNum) = await _memoryDb.LoadStageKilledNpcNum(accountId, npcCode);
             if (errorCode == ErrorCode.LoadStageKilledNpcNum_Fail_Exception)
             {
-                _logger.ZLogError($"[GameStageController.IsExceedNpcNum] Load Stage Killed Enemy Num Fail, AccountId = {accountId}, StageNum = {stageNum}, NpcCode = {npcCode}");
+                _logger.ZLogError($"[GameStageController.IsValidNpcCode] Load Stage Killed Enemy Num Fail, AccountId = {accountId}, StageNum = {stageNum}, NpcCode = {npcCode}");
                 return false;
             }
 
@@ -467,8 +481,10 @@ namespace TuesberryAPIServer.Controllers
             Int32 amount = 0;
 
             // 추가할 아이템 리스트
-            foreach(var itemCode in _masterDb.StageItems[stageNum])
+            foreach(var item in _masterDb.StageItems[stageNum])
             {
+                var itemCode = item.Key;
+
                 var key = MemoryDbKeyMaker.MakeStageItemKey(itemCode);
 
                 if(stageData.TryGetValue(key, out amount))

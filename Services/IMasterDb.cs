@@ -22,7 +22,7 @@ namespace TuesberryAPIServer.Services
 
         public Dictionary<Int32, List<ProductMasterData>> BundleProducts { get; }
 
-        public Dictionary<Int32, List<Int32>> StageItems { get; }
+        public Dictionary<Int32, Dictionary<Int32, Int32>> StageItems { get; }
 
         public Dictionary<Int32, List<NpcMasterData>> StageNpc { get; }
 

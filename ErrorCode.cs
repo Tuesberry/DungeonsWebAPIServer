@@ -189,5 +189,8 @@
 
         SendChat_Fail_Exception = 126,
         SendChat_Fail_Invalid_Channel = 127,
+
+        LoadStageFoundItemNum_Fail_Exception = 128,
+        LoadStageFoundItemNum_Fail_Not_Exist = 129,
     }
 }

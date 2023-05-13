@@ -71,11 +71,19 @@ namespace TuesberryAPIServer.Services
                 {
                     if(StageItems.ContainsKey(stageItem.Code))
                     {
-                        StageItems[stageItem.Code].Add(stageItem.ItemCode);
+                        if(StageItems[stageItem.Code].ContainsKey(stageItem.ItemCode))
+                        {
+                            StageItems[stageItem.Code][stageItem.ItemCode] += 1;
+                        }
+                        else
+                        {
+                            StageItems[stageItem.Code].Add(stageItem.ItemCode, 1);
+                        }
                     }
                     else
                     {
-                        StageItems.Add(stageItem.Code, new List<Int32>(new Int32[] {stageItem.ItemCode}));   
+                        StageItems.Add(stageItem.Code, new Dictionary<Int32, Int32>());
+                        StageItems[stageItem.Code].Add(stageItem.ItemCode, 1);
                     }
                 }
                 // npc data
@@ -139,7 +147,7 @@ namespace TuesberryAPIServer.Services
 
         public Dictionary<Int32, List<ProductMasterData>> BundleProducts { get; } = new Dictionary<Int32, List<ProductMasterData>>();
 
-        public Dictionary<Int32, List<Int32>> StageItems { get; } = new Dictionary<Int32, List<Int32>>();
+        public Dictionary<Int32, Dictionary<Int32, Int32>> StageItems { get; } = new Dictionary<Int32, Dictionary<Int32, Int32>>();
 
         public Dictionary<Int32, List<NpcMasterData>> StageNpc { get; } = new Dictionary<Int32, List<NpcMasterData>>();
 

@@ -39,6 +39,8 @@ namespace TuesberryAPIServer.Services
 
         public Task<ErrorCode> SetStageKilledNpc(Int64 accountId, Int32 npcCode);
 
+        public Task<Tuple<ErrorCode, Int32>> LoadStageFoundItemNum(Int64 accountId, Int32 itemCode);
+
         public Task<Tuple<ErrorCode, Int32>> LoadStageKilledNpcNum(Int64 accountId, Int32 npcCode);
 
         public Task<Tuple<ErrorCode, Dictionary<string, Int32>>> LoadPlayingStageInfo(Int64 accountId, Int32 stageNum);
