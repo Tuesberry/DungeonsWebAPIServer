@@ -1,8 +1,13 @@
 ﻿using CloudStructures;
 using CloudStructures.Structures;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
+using System;
+using System.Net.Sockets;
+using System.Net.WebSockets;
+using System.Text;
 using TuesberryAPIServer.ModelDb;
 using ZLogger;
 
@@ -15,6 +20,12 @@ namespace TuesberryAPIServer.Services
         public const ushort PlayingInfoKeyExpireMin = 3000; //test 용도
     }
 
+    public class Channel
+    {
+        public const ushort ChannelCount = 100;
+        public const ushort MaxCountPerChannel = 10;
+    }
+
     public class RedisDb : IMemoryDb
     {
         readonly ILogger<RedisDb> _logger;
@@ -23,6 +34,21 @@ namespace TuesberryAPIServer.Services
         public RedisDb(ILogger<RedisDb> logger)
         {
             _logger = logger;
+        }
+
+        public TimeSpan LoginTimeSpan()
+        {
+            return TimeSpan.FromMinutes(RediskeyExpireTime.LoginKeyExpireMin);
+        }
+
+        public TimeSpan PlayingInfoTimeSpan()
+        {
+            return TimeSpan.FromMinutes(RediskeyExpireTime.PlayingInfoKeyExpireMin);
+        }
+
+        public TimeSpan NxKeyTimeSpan()
+        {
+            return TimeSpan.FromSeconds(RediskeyExpireTime.NxKeyExpireSecond);
         }
 
         public void Init(string address)
@@ -328,7 +354,7 @@ namespace TuesberryAPIServer.Services
                 var redis = new RedisDictionary<string, Int32>(_redisCon, key, null);
                 var npcNum = await redis.GetAsync(npcKey);
 
-                if(!npcNum.HasValue)
+                if (!npcNum.HasValue)
                 {
                     _logger.ZLogError($"[RedisDb.LoadStageKilledNpcNum] ErrorCode = {ErrorCode.LoadStageKilledNpcNum_Fail_Not_Exist}, AccountId = {accountId}, NpcCode = {npcCode}");
                     return new Tuple<ErrorCode, Int32>(ErrorCode.LoadStageKilledNpcNum_Fail_Not_Exist, 0);
@@ -353,7 +379,7 @@ namespace TuesberryAPIServer.Services
                 var redis = new RedisDictionary<string, Int32>(_redisCon, key, null);
                 var stageData = await redis.GetAllAsync();
 
-                if(stageData is null)
+                if (stageData is null)
                 {
                     _logger.ZLogError($"[RedisDb.LoadPlayingStageInfo] ErrorCode = {ErrorCode.LoadPlayingStageInfo_Fail_Not_Exist}, AccountId = {accountId}, StageNum = {stageNum}");
                     return new Tuple<ErrorCode, Dictionary<string, Int32>>(ErrorCode.LoadPlayingStageInfo_Fail_Not_Exist, null);
@@ -369,19 +395,197 @@ namespace TuesberryAPIServer.Services
             }
         }
 
-        public TimeSpan LoginTimeSpan()
+        public async Task<Tuple<ErrorCode, Int32>> AllocateChannel()
         {
-            return TimeSpan.FromMinutes(RediskeyExpireTime.LoginKeyExpireMin);
+            var key = MemoryDbKeyMaker.ChannelKey;
+
+            try
+            {
+                var redis = new RedisDictionary<Int32, Int32>(_redisCon, key, null);
+                for(int i =1; i <= Channel.ChannelCount; i++)
+                {
+                    var channelCnt = await redis.GetAsync(i);
+
+                    if(channelCnt.HasValue)
+                    {
+                        if(channelCnt.Value >= Channel.MaxCountPerChannel)
+                        {
+                            continue;
+                        }
+                    }
+
+                    var result = await redis.IncrementAsync(i, 1);
+
+                    _logger.ZLogInformation($"[RedisDb.AllocateChannel] Complete, Channel = {i}, Result = {result}");
+                    return new Tuple<ErrorCode, Int32>(ErrorCode.None, i);
+                }
+
+                _logger.ZLogError($"[RedisDb.AllocateChannel] ErrorCode = {ErrorCode.AllocateChannel_Fail_All_Channel_Full}");
+                return new Tuple<ErrorCode, Int32>(ErrorCode.AllocateChannel_Fail_All_Channel_Full, 0);
+            }
+            catch
+            {
+                _logger.ZLogError($"[RedisDb.AllocateChannel] ErrorCode = {ErrorCode.AllocateChannel_Fail_Exception}");
+                return new Tuple<ErrorCode, Int32>(ErrorCode.AllocateChannel_Fail_Exception, 0);
+            }
         }
 
-        public TimeSpan PlayingInfoTimeSpan()
+        bool IsInvalidChannel(Int32 channel)
         {
-            return TimeSpan.FromMinutes(RediskeyExpireTime.PlayingInfoKeyExpireMin);
+            if (channel <= 0 || channel > Channel.ChannelCount)
+            {
+                return true;
+            }
+            return false;
         }
 
-        public TimeSpan NxKeyTimeSpan()
+        public async Task<ErrorCode> AllocateChannel(Int32 channel)
         {
-            return TimeSpan.FromSeconds(RediskeyExpireTime.NxKeyExpireSecond);
+            if(IsInvalidChannel(channel))
+            {
+                _logger.ZLogError($"[RedisDb.AllocateChannel] ErrorCode = {ErrorCode.AllocateChannel_Fail_Invalid_ChannelNum}, Channel = {channel}");
+                return ErrorCode.AllocateChannel_Fail_Invalid_ChannelNum;
+            }
+
+            var key = MemoryDbKeyMaker.ChannelKey;
+
+            try
+            {
+                var redis = new RedisDictionary<Int32, Int32>(_redisCon, key, null);
+
+                var channelCnt = await redis.GetAsync(channel);
+
+                if(channelCnt.HasValue)
+                {
+                    if (channelCnt.Value >= Channel.MaxCountPerChannel)
+                    {
+                        _logger.ZLogError($"[RedisDb.AllocateChannel] ErrorCode = {ErrorCode.AllocateChannel_Fail_Channel_Full}, Channel = {channel}");
+                        return ErrorCode.AllocateChannel_Fail_Channel_Full;
+                    }
+                }
+
+                await redis.IncrementAsync(channel, 1);
+
+                _logger.ZLogDebug($"[RedisDb.AllocateChannel] Complete, Channel = {channel}");
+                return ErrorCode.None;
+            }
+            catch
+            {
+                _logger.ZLogError($"[RedisDb.AllocateChannel] ErrorCode = {ErrorCode.AllocateChannel_Fail_Exception}, Channel = {channel}");
+                return ErrorCode.AllocateChannel_Fail_Exception;
+            }
+        }
+
+        public async Task<ErrorCode> LeaveChannel(Int32 channel)
+        {
+            if(IsInvalidChannel(channel))
+            {
+                _logger.ZLogError($"[RedisDb.LeaveChannel] ErrorCode = {ErrorCode.LeaveChannel_Fail_Invalid_Channel}, Channel = {channel}");
+                return ErrorCode.LeaveChannel_Fail_Invalid_Channel;
+            }
+
+            var key = MemoryDbKeyMaker.ChannelKey;
+            
+            try
+            {
+                var redis = new RedisDictionary<Int32, Int32>(_redisCon, key, null);
+
+                var channelCnt = await redis.GetAsync(channel);
+
+                if (!channelCnt.HasValue)
+                {
+                    _logger.ZLogError($"[RedisDb.LeaveChannel] ErrorCode = {ErrorCode.LeaveChannel_Fail_Channel_Not_Exist}, Channel = {channel}");
+                    return ErrorCode.LeaveChannel_Fail_Channel_Not_Exist;
+                }
+                if(channelCnt.Value <= 0)
+                {
+                    _logger.ZLogError($"[RedisDb.LeaveChannel] ErrorCode = {ErrorCode.LeaveChannel_Fail_Invalid_Channel}, Channel = {channel}");
+                    return ErrorCode.LeaveChannel_Fail_Invalid_Channel;
+                }
+
+                await redis.DecrementAsync(channel, 1);
+
+                _logger.ZLogDebug($"[RedisDb.LeaveChannel] Complete, Channel = {channel}");
+                return ErrorCode.None;
+
+            }
+            catch
+            {
+                _logger.ZLogError($"[RedisDb.LeaveChannel] ErrorCode = {ErrorCode.LeaveChannel_Fail_Exception}, Channel = {channel}");
+                return ErrorCode.LeaveChannel_Fail_Exception;
+            }
+        }
+
+        public async Task<ErrorCode> EnterChatRoom(Int32 channel, Action<RedisChannel, RedisValue> handler)
+        {
+            if(IsInvalidChannel(channel))
+            {
+                _logger.ZLogError($"[RedisDb.EnterChatRoom] ErrorCode = {ErrorCode.EnterChatRoom_Fail_Invalid_Channel}, Channel = {channel}");
+                return ErrorCode.EnterChatRoom_Fail_Invalid_Channel;
+            }
+
+            var channelKey = MemoryDbKeyMaker.MakeChannelKey(channel);
+
+            try
+            {
+                await _redisCon.GetConnection().GetSubscriber().SubscribeAsync(channelKey, handler);
+
+                _logger.ZLogDebug($"[RedisDb.EnterChatRoom] Complete, Channel = {channel}");
+                return ErrorCode.None;
+            }
+            catch
+            {
+                _logger.ZLogError($"[RedisDb.EnterChatRoom] ErrorCode = {ErrorCode.EnterChatRoom_Fail_Exception}, Channel = {channel}");
+                return ErrorCode.EnterChatRoom_Fail_Exception;
+            }
+        }
+
+        public async Task<ErrorCode> LeaveChatRoom(Int32 channel, Action<RedisChannel, RedisValue> handler)
+        {
+            if (IsInvalidChannel(channel))
+            {
+                _logger.ZLogError($"[RedisDb.LeaveChatRoom] ErrorCode = {ErrorCode.LeaveChatRoom_Fail_Invalid_Channel}, Channel = {channel}");
+                return ErrorCode.LeaveChatRoom_Fail_Invalid_Channel;
+            }
+
+            var channelKey = MemoryDbKeyMaker.MakeChannelKey(channel);
+
+            try
+            {
+                await _redisCon.GetConnection().GetSubscriber().UnsubscribeAsync(channelKey, handler);
+
+                _logger.ZLogDebug($"[RedisDb.EnterChatRoom] Complete, Channel = {channel}");
+                return ErrorCode.None;
+            }
+            catch
+            {
+                _logger.ZLogError($"[RedisDb.EnterChatRoom] ErrorCode = {ErrorCode.EnterChatRoom_Fail_Exception}, Channel = {channel}");
+                return ErrorCode.EnterChatRoom_Fail_Exception;
+            }
+        }
+
+        public async Task<ErrorCode> SendChat(Int32 channel, string message)
+        {
+            if (IsInvalidChannel(channel))
+            {
+                _logger.ZLogError($"[RedisDb.SendChat] ErrorCode = {ErrorCode.SendChat_Fail_Invalid_Channel}, Channel = {channel}");
+                return ErrorCode.SendChat_Fail_Invalid_Channel;
+            }
+
+            var channelKey = MemoryDbKeyMaker.MakeChannelKey(channel);
+
+            try
+            {
+                await _redisCon.GetConnection().GetSubscriber().PublishAsync(channelKey, message);
+
+                _logger.ZLogDebug($"[RedisDb.SendChat] Complete, Channel = {channel}");
+                return ErrorCode.None;
+            }
+            catch
+            {
+                _logger.ZLogError($"[RedisDb.SendChat] ErrorCode = {ErrorCode.SendChat_Fail_Exception}, Channel = {channel}");
+                return ErrorCode.SendChat_Fail_Exception;
+            }
         }
     }
 }

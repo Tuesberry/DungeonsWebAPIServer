@@ -1,4 +1,6 @@
-﻿using TuesberryAPIServer.ModelDb;
+﻿using StackExchange.Redis;
+using System.Net.WebSockets;
+using TuesberryAPIServer.ModelDb;
 
 namespace TuesberryAPIServer.Services
 {
@@ -41,5 +43,20 @@ namespace TuesberryAPIServer.Services
 
         public Task<Tuple<ErrorCode, Dictionary<string, Int32>>> LoadPlayingStageInfo(Int64 accountId, Int32 stageNum);
 
+        // --------- Channel --------- //
+
+        public Task<Tuple<ErrorCode, Int32>> AllocateChannel();
+
+        public Task<ErrorCode> AllocateChannel(Int32 channel);
+
+        public Task<ErrorCode> LeaveChannel(Int32 channel);
+
+        // --------- Chat --------- //
+
+        public Task<ErrorCode> EnterChatRoom(Int32 channel, Action<RedisChannel, RedisValue> handler);
+
+        public Task<ErrorCode> LeaveChatRoom(Int32 channel, Action<RedisChannel, RedisValue> handler);
+
+        public Task<ErrorCode> SendChat(Int32 channel, string message);
     }
 }

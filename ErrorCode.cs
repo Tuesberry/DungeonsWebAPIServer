@@ -171,5 +171,23 @@
 
         UpdateStage_Fail_Exception = 120,
         UpdateStage_Fail_AccountId_Not_Exist = 121,
+
+        AllocateChannel_Fail_Exception = 122,
+        AllocateChannel_Fail_All_Channel_Full = 123,
+        AllocateChannel_Fail_Invalid_ChannelNum = 124,
+        AllocateChannel_Fail_Channel_Full = 125,
+
+        LeaveChannel_Fail_Exception = 126,
+        LeaveChannel_Fail_Invalid_Channel = 127,
+        LeaveChannel_Fail_Channel_Not_Exist = 128,
+
+        EnterChatRoom_Fail_Exception = 126,
+        EnterChatRoom_Fail_Invalid_Channel = 127,
+
+        LeaveChatRoom_Fail_Exception = 126,
+        LeaveChatRoom_Fail_Invalid_Channel = 127,
+
+        SendChat_Fail_Exception = 126,
+        SendChat_Fail_Invalid_Channel = 127,
     }
 }

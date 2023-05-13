@@ -1,4 +1,6 @@
-﻿namespace TuesberryAPIServer.Services
+﻿using System.Text;
+
+namespace TuesberryAPIServer.Services
 {
     public class MemoryDbKeyMaker
     {
@@ -10,7 +12,11 @@
         const string itemKey = "UItem_";
         const string npcKey = "UNpc_";
 
+        const string channelKey = "Channel_";
+
         public static string StageKey { get; } = "Stage";
+
+        public static string ChannelKey { get; } = "Channel";
 
         public static string MakeUIDKey(string id)
         {
@@ -35,6 +41,11 @@
         public static string MakeStageNpcKey(Int32 npcCode)
         {
             return npcKey + npcCode.ToString();
+        }
+
+        public static string MakeChannelKey(Int32 channel)
+        {
+            return ChannelKey + channel.ToString();
         }
     }
 }

@@ -40,6 +40,12 @@ if(!app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();    
 }
 
+// use websockets
+app.UseWebSockets();
+
+// enter chat
+app.UseEnterChatting();
+
 // add check middleware
 app.UseCheckUserVersion();
 app.UseCheckUserAuth();
