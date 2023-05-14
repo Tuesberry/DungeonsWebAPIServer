@@ -25,6 +25,7 @@ namespace TuesberryAPIServer.Services
     {
         public const ushort ChannelCount = 100;
         public const ushort MaxCountPerChannel = 10;
+        public const ushort MaxSaveChatHistoryNum = 50;
     }
 
     public class RedisDb : IMemoryDb
@@ -615,5 +616,63 @@ namespace TuesberryAPIServer.Services
                 return ErrorCode.SendChat_Fail_Exception;
             }
         }
+
+        public async Task<ErrorCode> SaveChat(Int32 channel, string message)
+        {
+            if (IsInvalidChannel(channel))
+            {
+                _logger.ZLogError($"[RedisDb.SaveChat] ErrorCode = {ErrorCode.SaveChat_Fail_Invalid_Channel}, Channel = {channel}");
+                return ErrorCode.SaveChat_Fail_Invalid_Channel;
+            }
+
+            var key = MemoryDbKeyMaker.MakeChannelKey(channel);
+
+            try
+            {
+                var redis = new RedisList<string>(_redisCon, key, null);
+
+                var dataLength = await redis.RightPushAsync(message);
+
+                if(dataLength > Channel.MaxSaveChatHistoryNum)
+                {
+                    await redis.LeftPopAsync();
+                }
+
+                _logger.ZLogDebug($"[RedisDb.SaveChat] Complete, Channel = {channel}");
+                return ErrorCode.None;
+            }
+            catch
+            {
+                _logger.ZLogError($"[RedisDb.SaveChat] ErrorCode = {ErrorCode.SaveChat_Fail_Exception}, Channel = {channel}");
+                return ErrorCode.SaveChat_Fail_Exception;
+            }
+        }
+
+        public async Task<Tuple<ErrorCode, List<string>>> LoadChat(Int32 channel)
+        {
+            if (IsInvalidChannel(channel))
+            {
+                _logger.ZLogError($"[RedisDb.LoadChat] ErrorCode = {ErrorCode.LoadChat_Fail_Invalid_Channel}, Channel = {channel}");
+                return new Tuple<ErrorCode, List<string>>(ErrorCode.LoadChat_Fail_Invalid_Channel, null);
+            }
+
+            var key = MemoryDbKeyMaker.MakeChannelKey(channel);
+
+            try
+            {
+                var redis = new RedisList<string>(_redisCon, key, null);
+
+                var chatData = await redis.RangeAsync(0, Channel.MaxSaveChatHistoryNum - 1);
+
+                _logger.ZLogDebug($"[RedisDb.LoadChat] Complete, Channel = {channel}");
+                return new Tuple<ErrorCode, List<string>>(ErrorCode.None, chatData.ToList<string>());
+            }
+            catch
+            {
+                _logger.ZLogError($"[RedisDb.LoadChat] ErrorCode = {ErrorCode.LoadChat_Fail_Exception}, Channel = {channel}");
+                return new Tuple<ErrorCode, List<string>>(ErrorCode.LoadChat_Fail_Exception, null);
+            }
+        }
+
     }
 }

@@ -1,6 +1,7 @@
 ﻿using StackExchange.Redis;
 using System.Net.WebSockets;
 using System.Text;
+using System.Threading.Channels;
 using TuesberryAPIServer.Services;
 using ZLogger;
 
@@ -41,8 +42,8 @@ namespace TuesberryAPIServer.Middleware
                     return;
                 }
 
-                // 채팅방 입장
-                errorCode = await EnterChat(webSocket, channel);
+                // 채팅 시작
+                errorCode = await StartChat(webSocket, channel);
                 if (errorCode != ErrorCode.None)
                 {
                     _logger.ZLogError($"[EnterChatting] Enter Chat Error");
@@ -63,7 +64,7 @@ namespace TuesberryAPIServer.Middleware
             }            
         }
 
-        async Task<ErrorCode> EnterChat(WebSocket webSocket, Int32 channel)
+        async Task<ErrorCode> StartChat(WebSocket webSocket, Int32 channel)
         {
             ErrorCode errorCode = ErrorCode.None;
 
@@ -76,6 +77,14 @@ namespace TuesberryAPIServer.Middleware
                 }
             };
 
+            // 채팅 히스토리 로드
+            errorCode = await LoadChatHistory(webSocket, channel);
+            if (errorCode != ErrorCode.None)
+            {
+                _logger.ZLogError($"[EnterChatting.StartChat] Load Chat History Error");
+                return errorCode;
+            }
+
             // 채팅방 입장
             if (webSocket.State == WebSocketState.Open)
             {
@@ -83,15 +92,65 @@ namespace TuesberryAPIServer.Middleware
                 errorCode = await _memoryDb.EnterChatRoom(channel, handler);
                 if (errorCode != ErrorCode.None)
                 {
-                    _logger.ZLogError($"[EnterChatting.EnterChat] Enter Chat Romm Error");
+                    _logger.ZLogError($"[EnterChatting.StartChat] Enter Chat Room Error");
                     return errorCode;
                 }
             }
 
+            // 채팅 루프
+            errorCode = await StartChatSession(webSocket, channel);
+            if(errorCode != ErrorCode.None)
+            {
+                _logger.ZLogError($"[EnterChatting.StartChat] Start Chat Session Error");
+                return errorCode;
+            }
+            
+            // 채팅방에서 나가기
+            errorCode = await _memoryDb.LeaveChatRoom(channel, handler);
+            if (errorCode != ErrorCode.None)
+            {
+                _logger.ZLogError($"[EnterChatting.StartChat] Leave Chat Romm Error");
+                return errorCode;
+            }
+
+            // close web socket
+            await webSocket.CloseAsync(webSocket.CloseStatus.Value, webSocket.CloseStatusDescription, CancellationToken.None);
+
+            return ErrorCode.None;
+        }
+
+        async Task<ErrorCode> LoadChatHistory(WebSocket webSocket, Int32 channel)
+        {
+            var(errorCode, chatDatum) = await _memoryDb.LoadChat(channel);
+            if(errorCode != ErrorCode.None)
+            {
+                _logger.ZLogError($"[EnterChatting.LoadChatHistory] Load Chat Error, Channel = {channel}");
+                return errorCode;
+            }
+
+            foreach(var chatData in chatDatum)
+            {
+                if (webSocket.State == WebSocketState.Open)
+                {
+                    var message = Encoding.UTF8.GetBytes(chatData);
+                    await webSocket.SendAsync(new ArraySegment<byte>(message), WebSocketMessageType.Text, true, CancellationToken.None);
+                }
+                else
+                {
+                    _logger.ZLogError($"[EnterChatting.LoadChatHistory] ErrorCode = {ErrorCode.LoadChatHistory_Fail_Connection_Close}, Channel = {channel}");
+                    return ErrorCode.LoadChatHistory_Fail_Connection_Close;
+                }
+            }
+
+            return ErrorCode.None;
+        }
+
+        async Task<ErrorCode> StartChatSession(WebSocket webSocket, Int32 channel)
+        {
             // Reserve 4KB buffer
             var buffer = new byte[1024 * 4];
 
-            // 채팅
+            // 채팅 루프
             while (webSocket.State == WebSocketState.Open)
             {
                 // non-blocking event loop
@@ -101,27 +160,23 @@ namespace TuesberryAPIServer.Middleware
                 // decode message as UTF-8 string, publish to Redis Channel
                 if (result.CloseStatus.HasValue == false)
                 {
+                    var errorCode = await _memoryDb.SaveChat(channel, Encoding.UTF8.GetString(buffer, 0, result.Count));
+                    if (errorCode != ErrorCode.None)
+                    {
+                        _logger.ZLogError($"[EnterChatting.StartChatSession] Save Chat Error");
+                        return errorCode;
+                    }
+
                     errorCode = await _memoryDb.SendChat(channel, Encoding.UTF8.GetString(buffer, 0, result.Count));
                     if (errorCode != ErrorCode.None)
                     {
-                        _logger.ZLogError($"[EnterChatting.EnterChat] Send Chat Error");
+                        _logger.ZLogError($"[EnterChatting.StartChatSession] Send Chat Error");
                         return errorCode;
                     }
                 }
             }
-
-            // leave chatting room
-            errorCode = await _memoryDb.LeaveChatRoom(channel, handler);
-            if (errorCode != ErrorCode.None)
-            {
-                _logger.ZLogError($"[EnterChatting.EnterChat] Leave Chat Romm Error");
-                return errorCode;
-            }
-
-            // close web socket
-            await webSocket.CloseAsync(webSocket.CloseStatus.Value, webSocket.CloseStatusDescription, CancellationToken.None);
-
             return ErrorCode.None;
         }
+            
     }
 }

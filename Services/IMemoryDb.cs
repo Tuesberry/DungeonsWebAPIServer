@@ -60,5 +60,9 @@ namespace TuesberryAPIServer.Services
         public Task<ErrorCode> LeaveChatRoom(Int32 channel, Action<RedisChannel, RedisValue> handler);
 
         public Task<ErrorCode> SendChat(Int32 channel, string message);
+
+        public Task<ErrorCode> SaveChat(Int32 channel, string message);
+
+        public Task<Tuple<ErrorCode, List<string>>> LoadChat(Int32 channel);
     }
 }

@@ -45,7 +45,7 @@ namespace TuesberryAPIServer.Services
 
         public static string MakeChannelKey(Int32 channel)
         {
-            return ChannelKey + channel.ToString();
+            return channelKey + channel.ToString();
         }
     }
 }

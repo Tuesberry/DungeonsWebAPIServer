@@ -192,5 +192,13 @@
 
         LoadStageFoundItemNum_Fail_Exception = 128,
         LoadStageFoundItemNum_Fail_Not_Exist = 129,
+
+        SaveChat_Fail_Exception = 130,
+        SaveChat_Fail_Invalid_Channel = 131,
+
+        LoadChat_Fail_Exception = 132,
+        LoadChat_Fail_Invalid_Channel = 133,
+
+        LoadChatHistory_Fail_Connection_Close = 134,
     }
 }
