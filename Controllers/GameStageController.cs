@@ -322,6 +322,46 @@ namespace TuesberryAPIServer.Controllers
             return response;
         }
 
+        [HttpPost("CancelStage")]
+        public async Task<PkCancelStageResponse> CancelStage([FromBody] PkCencelStageRequest request)
+        {
+            var response = new PkCancelStageResponse();
+
+            // userInfo 가져오기
+            AuthUser userInfo = _httpContextAccessor.HttpContext.Items[nameof(AuthUser)] as AuthUser;
+            if (userInfo is null)
+            {
+                response.Result = ErrorCode.AuthToken_Access_Error;
+                return response;
+            }
+
+            // 플레이 시작한 스테이지 번호인지 검증
+            var (errorCode, stageNum) = await _memoryDb.GetPlayingStage(userInfo.AccountId);
+            if (errorCode != ErrorCode.None)
+            {
+                _logger.ZLogError($"[GameStageController.CancelStage] Get Playing Stage Error, AccountId = {userInfo.AccountId}");
+                response.Result = errorCode;
+                return response;
+            }
+            if (stageNum != request.StageNum)
+            {
+                _logger.ZLogError($"[GameStageController.CancelStage] ErrorCode = {ErrorCode.SaveFoundItem_Fail_Invalid_StageNum}, AccountId = {userInfo.AccountId}, StageNum = {request.StageNum}");
+                response.Result = ErrorCode.SaveFoundItem_Fail_Invalid_StageNum;
+                return response;
+            }
+
+            // 스테이지 저장 데이터 삭제
+            errorCode = await _memoryDb.DelPlayingStage(userInfo.AccountId);
+            if (errorCode != ErrorCode.None)
+            {
+                _logger.ZLogError($"[GameStageController.CancelStage] Delete Playing Stage Info Fail, AccountId = {userInfo.AccountId}, StageNum = {request.StageNum}");
+                response.Result = errorCode;
+                return response;
+            }
+
+            return response;
+        }
+
         async Task RollbackStage(Int64 accountId, Int32 stageNum)
         {
             // 클리어 스테이지 정보 롤백
