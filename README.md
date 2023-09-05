@@ -51,7 +51,7 @@ services:
 ### Docker Compose를 이용한 서버 배포
 
 1. Dockerfile과 docker-entrypoint.sh 파일을 API 서버 폴더와 같은 경로에 만든다.
-2. Dockerfile을 통해 ASP.NET Core Docker Image를 생성한다. 
+2. Dockerfile을 통해 ASP.NET Core Docker Image를 빌드한다. 
 ```shell
 docker build -t aspnetapp .
 ```
@@ -59,7 +59,7 @@ docker build -t aspnetapp .
 ```shell
 docker-compose up
 ```
-### Dockerfile
+#### Dockerfile
 
 [참고 ) ASP.NET Core Docker Image 만드는 방법](https://learn.microsoft.com/ko-kr/aspnet/core/host-and-deploy/docker/building-net-docker-images?view=aspnetcore-7.0)
 
@@ -94,7 +94,7 @@ RUN chmod +x docker-entrypoint.sh
 ENTRYPOINT ["/bin/sh", "docker-entrypoint.sh"]
 ```
 
-### entrypoint.sh
+#### entrypoint.sh
 
 ```shell
 #!/bin/bash
@@ -111,7 +111,7 @@ echo "api server start running"
 dotnet TuesberryAPIServer.dll
 ```
 
-### docker-compose.yml
+#### docker-compose.yml
 
 ```YAML
 version: '3'
@@ -150,3 +150,109 @@ services:
 ```
 
 ### Kubernetes를 이용한 서버 배포
+
+```YAML
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+spec:
+  type: ClusterIP
+  selector:
+    app: mysql
+  ports:
+  - port: 3306
+    targetPort: 3306
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+spec:
+  type: ClusterIP
+  selector:
+    app: redis
+  ports:
+  - port: 6379
+    targetPort: 6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: apiserver
+spec:
+  type: NodePort
+  ports:
+  - port: 8000
+    targetPort: 8000
+    nodePort: 30001
+  selector:
+    app: dotnet-api-server
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: redis-server
+  labels:
+    app: redis
+spec:
+  containers:
+  - name: redis-server
+    image: redis
+    ports:
+    - containerPort: 6379
+    command: ['redis-server']
+    volumeMounts:
+    - name: redis-storage
+      mountPath: /data
+  volumes:
+  - name: redis-storage
+    hostPath:
+      path: /src/redis-data 
+      type: Directory
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mysql-served
+  labels:
+    app: mysql
+spec:
+  containers:
+  - name: mysql-server
+    image: mysql
+    env:
+    - name: MYSQL_ROOT_PASSWORD
+      value: rkawk123
+    - name: MYSQL_USER
+      value: Tuesberry
+    - name: MYSQL_PASSWORD
+      value: rkawk1234
+    ports:
+    - containerPort: 3306
+    volumeMounts:
+    - name: mysql-data
+      mountPath: /var/lib/mysql
+  volumes:
+  - name: mysql-data
+    hostPath:
+      path: /src/db-data
+      type: Directory
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dotnet-api-server
+  labels:
+    app: dotnet-api-server
+spec:
+  containers:
+  - name: dotnet-api-server
+    image: tuesberry/dotnet_api_server:latest
+    ports:
+    - containerPort: 8000
+  initContainers:
+  - name: init-mysql
+    image: busybox:1.28
+    command: ['sh', '-c', 'while ! nc -w1 mysql 3306; do echo wait mysql; sleep 1; done']
+```
