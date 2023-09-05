@@ -44,8 +44,6 @@ services:
       - "6379:6379"
 ```
 
-
-
 ## How to Deploy
 
 ### Docker Compose를 이용한 서버 배포
@@ -63,7 +61,7 @@ docker-compose up
 
 [참고 ) ASP.NET Core Docker Image 만드는 방법](https://learn.microsoft.com/ko-kr/aspnet/core/host-and-deploy/docker/building-net-docker-images?view=aspnetcore-7.0)
 
-```Docker
+```Dockerfile
 # building .NET container images
 FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
 WORKDIR /source
