@@ -1,4 +1,4 @@
-# WebAPIServer
+# Dungeons Game Web API Server
 'Dungeons' 게임 API 서버입니다.
 
 * ASP.NET Core Web API Server
